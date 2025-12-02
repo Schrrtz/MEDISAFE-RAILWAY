@@ -1,0 +1,1050 @@
+================================================================================
+          ANDROID APP AUTHENTICATION WITH DJANGO HASHED PASSWORDS
+                    Complete Implementation Guide
+================================================================================
+
+IMPORTANT: Android DOES NOT need to handle password hashing directly!
+Your Django server already does all the hashing. Android just needs to 
+communicate with your Django API properly.
+
+================================================================================
+                    THE SIMPLE TRUTH
+================================================================================
+
+Your website and Android app will share the SAME authentication system because:
+
+1. Both connect to the SAME Django server
+2. Django server connects to the SAME Supabase database
+3. Django server handles ALL password hashing and verification
+4. Android app just sends credentials, receives responses
+
+ARCHITECTURE:
+   
+   Website (Browser)                      Android App
+         │                                      │
+         │ HTTPS POST /login/                   │ HTTPS POST /login/
+         │ {username, password}                 │ {username, password}
+         │                                      │
+         └──────────────┬───────────────────────┘
+                        │
+                        ↓
+                 Django Server (Backend)
+            ┌────────────────────────┐
+            │ - Receives credentials │
+            │ - Hashes password      │
+            │ - Compares with DB     │
+            │ - Returns token        │
+            └────────────┬───────────┘
+                         │
+                         ↓
+                   Supabase Database
+            ┌────────────────────────┐
+            │ users table:           │
+            │ - username             │
+            │ - password (hashed)    │
+            │ - email                │
+            └────────────────────────┘
+
+RESULT: Both website and Android use the SAME login credentials!
+
+================================================================================
+                    WHAT ANDROID APP NEEDS
+================================================================================
+
+1. NETWORK PERMISSIONS
+   Location: app/src/main/AndroidManifest.xml
+   
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+       package="com.medisafe.patient">
+
+       <!-- Internet permission for API calls -->
+       <uses-permission android:name="android.permission.INTERNET" />
+       <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+       
+       <application
+           android:usesCleartextTraffic="false"
+           android:networkSecurityConfig="@xml/network_security_config"
+           ... >
+           
+           <activity android:name=".LoginActivity">
+               <intent-filter>
+                   <action android:name="android.intent.action.MAIN" />
+                   <category android:name="android.intent.category.LAUNCHER" />
+               </intent-filter>
+           </activity>
+           
+       </application>
+   </manifest>
+   ```
+
+2. NETWORK SECURITY CONFIGURATION
+   Location: app/src/main/res/xml/network_security_config.xml
+   
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <network-security-config>
+       <!-- Production configuration -->
+       <domain-config cleartextTrafficPermitted="false">
+           <domain includeSubdomains="true">your-django-server.com</domain>
+           <trust-anchors>
+               <certificates src="system" />
+           </trust-anchors>
+       </domain-config>
+       
+       <!-- Development only - allow localhost -->
+       <domain-config cleartextTrafficPermitted="true">
+           <domain includeSubdomains="true">localhost</domain>
+           <domain includeSubdomains="true">10.0.2.2</domain> <!-- Android emulator -->
+           <domain includeSubdomains="true">192.168.1.100</domain> <!-- Your local IP -->
+       </domain-config>
+   </network-security-config>
+   ```
+
+3. GRADLE DEPENDENCIES
+   Location: app/build.gradle
+   
+   ```gradle
+   android {
+       compileSdk 34
+       
+       defaultConfig {
+           applicationId "com.medisafe.patient"
+           minSdk 24
+           targetSdk 34
+           versionCode 1
+           versionName "1.0"
+       }
+       
+       buildFeatures {
+           viewBinding true
+       }
+   }
+
+   dependencies {
+       implementation 'androidx.appcompat:appcompat:1.6.1'
+       implementation 'com.google.android.material:material:1.11.0'
+       implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+       
+       // HTTP Client - Choose ONE of these:
+       
+       // Option 1: Retrofit (Recommended - Modern, Type-safe)
+       implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+       implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+       implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+       
+       // Option 2: Volley (Google's library - Simple)
+       // implementation 'com.android.volley:volley:1.2.1'
+       
+       // Secure storage
+       implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+       
+       // JSON parsing
+       implementation 'com.google.code.gson:gson:2.10.1'
+   }
+   ```
+
+================================================================================
+                    DJANGO SERVER CONFIGURATION
+================================================================================
+
+1. YOUR DJANGO SERVER URLS (Already Set Up)
+   
+   Base URL: http://your-server-ip:8000/  (Development)
+            https://your-domain.com/       (Production)
+   
+   Endpoints:
+   ┌─────────────────────┬──────────┬──────────────────────────────────────┐
+   │ Endpoint            │ Method   │ Purpose                              │
+   ├─────────────────────┼──────────┼──────────────────────────────────────┤
+   │ /login/             │ POST     │ User login (website & Android)       │
+   │ /signup/            │ POST     │ User registration                    │
+   │ /logout/            │ POST     │ User logout                          │
+   │ /dashboard/         │ GET      │ User dashboard data                  │
+   │ /userprofile/       │ GET/POST │ User profile                         │
+   │ /consultations/     │ GET      │ List appointments                    │
+   │ /book-consultation/ │ POST     │ Book new appointment                 │
+   │ /lab-results/       │ GET      │ View lab results                     │
+   │ /prescriptions/     │ GET      │ View prescriptions                   │
+   │ /notifications/     │ GET      │ Get notifications                    │
+   └─────────────────────┴──────────┴──────────────────────────────────────┘
+
+2. ENABLE CORS (If needed for API access)
+   Location: PBL/MEDISAFE_PBL/settings.py
+   
+   ```python
+   INSTALLED_APPS = [
+       # ... existing apps ...
+       'corsheaders',  # Add this
+   ]
+   
+   MIDDLEWARE = [
+       'corsheaders.middleware.CorsMiddleware',  # Add at top
+       'django.middleware.security.SecurityMiddleware',
+       # ... rest of middleware ...
+   ]
+   
+   # Allow requests from Android app
+   CORS_ALLOWED_ORIGINS = [
+       "http://localhost:8000",
+       "http://your-android-app-domain",
+   ]
+   
+   # Or allow all origins (development only)
+   CORS_ALLOW_ALL_ORIGINS = True  # ONLY for development!
+   ```
+   
+   Install: `pip install django-cors-headers`
+
+3. YOUR EXISTING DJANGO VIEWS (No Changes Needed!)
+   Location: PBL/myapp/features/auth/views.py
+   
+   Your login view already works perfectly:
+   ```python
+   @csrf_exempt  # Important for Android
+   def login(request):
+       if request.method == "POST":
+           data = json.loads(request.body)
+           username = data.get("username")
+           password = data.get("password")
+           
+           # This works for BOTH website and Android!
+           user = authenticate(username=username, password=password)
+           
+           if user is not None:
+               auth_login(request, user)
+               return JsonResponse({
+                   "success": True,
+                   "message": "Login successful",
+                   "user_id": user.user_id,
+                   "role": user.role,
+                   "redirect": "/dashboard"
+               })
+           else:
+               return JsonResponse({
+                   "success": False,
+                   "message": "Invalid credentials"
+               }, status=401)
+   ```
+   
+   The key: `@csrf_exempt` decorator allows Android to access the endpoint!
+
+================================================================================
+                    ANDROID APP IMPLEMENTATION
+================================================================================
+
+OPTION A: USING RETROFIT (RECOMMENDED)
+----------------------------------------
+
+Step 1: Create API Interface
+Location: app/src/main/java/com/medisafe/api/MedisafeAPI.java
+
+```java
+package com.medisafe.api;
+
+import retrofit2.Call;
+import retrofit2.http.*;
+
+public interface MedisafeAPI {
+    
+    // Login
+    @POST("login/")
+    Call<LoginResponse> login(@Body LoginRequest request);
+    
+    // Signup
+    @POST("signup/")
+    Call<SignupResponse> signup(@Body SignupRequest request);
+    
+    // Get user profile
+    @GET("userprofile/")
+    Call<UserProfile> getUserProfile(@Header("Cookie") String sessionCookie);
+    
+    // Get appointments
+    @GET("consultations/")
+    Call<AppointmentsResponse> getAppointments(@Header("Cookie") String sessionCookie);
+    
+    // Book appointment
+    @POST("book-consultation/")
+    Call<BookingResponse> bookAppointment(
+        @Body AppointmentRequest request,
+        @Header("Cookie") String sessionCookie
+    );
+    
+    // Get lab results
+    @GET("lab-results/")
+    Call<LabResultsResponse> getLabResults(@Header("Cookie") String sessionCookie);
+    
+    // Get prescriptions
+    @GET("prescriptions/")
+    Call<PrescriptionsResponse> getPrescriptions(@Header("Cookie") String sessionCookie);
+}
+```
+
+Step 2: Create Data Models
+Location: app/src/main/java/com/medisafe/models/
+
+```java
+// LoginRequest.java
+package com.medisafe.models;
+
+public class LoginRequest {
+    private String username;
+    private String password;
+    
+    public LoginRequest(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+    
+    // Getters and setters
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+}
+
+// LoginResponse.java
+package com.medisafe.models;
+
+import com.google.gson.annotations.SerializedName;
+
+public class LoginResponse {
+    @SerializedName("success")
+    private boolean success;
+    
+    @SerializedName("message")
+    private String message;
+    
+    @SerializedName("user_id")
+    private int userId;
+    
+    @SerializedName("role")
+    private String role;
+    
+    @SerializedName("redirect")
+    private String redirect;
+    
+    // Getters
+    public boolean isSuccess() { return success; }
+    public String getMessage() { return message; }
+    public int getUserId() { return userId; }
+    public String getRole() { return role; }
+    public String getRedirect() { return redirect; }
+}
+
+// SignupRequest.java
+package com.medisafe.models;
+
+public class SignupRequest {
+    private String username;
+    private String email;
+    private String password;
+    private String first_name;
+    private String last_name;
+    private String middle_name;
+    private String sex;
+    private String birthday;
+    private String civil_status;
+    private String address;
+    private String contact_person;
+    private String relationship_to_patient;
+    private String contact_number;
+    private String phone_number;
+    private String phone_type;
+    private boolean data_privacy_consent;
+    private String role;
+    
+    // Constructor, getters, setters
+    // ... (add all fields)
+}
+```
+
+Step 3: Create Retrofit Client
+Location: app/src/main/java/com/medisafe/api/RetrofitClient.java
+
+```java
+package com.medisafe.api;
+
+import okhttp3.Cookie;
+import okhttp3.CookieJar;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+public class RetrofitClient {
+    private static final String BASE_URL = "http://your-server-ip:8000/";
+    // For Android emulator use: http://10.0.2.2:8000/
+    // For real device use your computer's IP: http://192.168.1.100:8000/
+    
+    private static Retrofit retrofit;
+    private static final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
+    
+    public static Retrofit getRetrofitInstance() {
+        if (retrofit == null) {
+            // Logging interceptor for debugging
+            HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            
+            // Cookie jar to handle Django session cookies
+            CookieJar cookieJar = new CookieJar() {
+                @Override
+                public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
+                    cookieStore.put(url.host(), cookies);
+                }
+                
+                @Override
+                public List<Cookie> loadForRequest(HttpUrl url) {
+                    List<Cookie> cookies = cookieStore.get(url.host());
+                    return cookies != null ? cookies : new ArrayList<>();
+                }
+            };
+            
+            // OkHttp client
+            OkHttpClient client = new OkHttpClient.Builder()
+                .addInterceptor(logging)
+                .cookieJar(cookieJar)
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build();
+            
+            // Retrofit instance
+            retrofit = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        }
+        return retrofit;
+    }
+    
+    public static MedisafeAPI getAPI() {
+        return getRetrofitInstance().create(MedisafeAPI.class);
+    }
+    
+    public static String getSessionCookie() {
+        List<Cookie> cookies = cookieStore.get(HttpUrl.parse(BASE_URL).host());
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.name().equals("sessionid")) {
+                    return "sessionid=" + cookie.value();
+                }
+            }
+        }
+        return "";
+    }
+}
+```
+
+Step 4: Create Login Activity
+Location: app/src/main/java/com/medisafe/LoginActivity.java
+
+```java
+package com.medisafe;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.medisafe.api.MedisafeAPI;
+import com.medisafe.api.RetrofitClient;
+import com.medisafe.models.LoginRequest;
+import com.medisafe.models.LoginResponse;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class LoginActivity extends AppCompatActivity {
+    private EditText usernameInput;
+    private EditText passwordInput;
+    private Button loginButton;
+    private ProgressBar progressBar;
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_login);
+        
+        // Initialize views
+        usernameInput = findViewById(R.id.username_input);
+        passwordInput = findViewById(R.id.password_input);
+        loginButton = findViewById(R.id.login_button);
+        progressBar = findViewById(R.id.progress_bar);
+        
+        // Login button click
+        loginButton.setOnClickListener(v -> {
+            String username = usernameInput.getText().toString().trim();
+            String password = passwordInput.getText().toString().trim();
+            
+            if (username.isEmpty() || password.isEmpty()) {
+                Toast.makeText(this, "Please enter username and password", 
+                    Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            performLogin(username, password);
+        });
+    }
+    
+    private void performLogin(String username, String password) {
+        // Show loading
+        progressBar.setVisibility(View.VISIBLE);
+        loginButton.setEnabled(false);
+        
+        // Create request
+        LoginRequest request = new LoginRequest(username, password);
+        
+        // Get API instance
+        MedisafeAPI api = RetrofitClient.getAPI();
+        
+        // Make API call
+        Call<LoginResponse> call = api.login(request);
+        call.enqueue(new Callback<LoginResponse>() {
+            @Override
+            public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
+                progressBar.setVisibility(View.GONE);
+                loginButton.setEnabled(true);
+                
+                if (response.isSuccessful() && response.body() != null) {
+                    LoginResponse loginResponse = response.body();
+                    
+                    if (loginResponse.isSuccess()) {
+                        // Login successful!
+                        Toast.makeText(LoginActivity.this, 
+                            "Welcome back!", Toast.LENGTH_SHORT).show();
+                        
+                        // Save user info
+                        saveUserInfo(loginResponse.getUserId(), loginResponse.getRole());
+                        
+                        // Navigate to main activity
+                        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                        intent.putExtra("user_id", loginResponse.getUserId());
+                        intent.putExtra("role", loginResponse.getRole());
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        // Login failed
+                        Toast.makeText(LoginActivity.this, 
+                            loginResponse.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    // HTTP error
+                    Toast.makeText(LoginActivity.this, 
+                        "Invalid credentials", Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<LoginResponse> call, Throwable t) {
+                progressBar.setVisibility(View.GONE);
+                loginButton.setEnabled(true);
+                
+                Toast.makeText(LoginActivity.this, 
+                    "Network error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+    
+    private void saveUserInfo(int userId, String role) {
+        getSharedPreferences("MedisafeApp", MODE_PRIVATE)
+            .edit()
+            .putInt("user_id", userId)
+            .putString("role", role)
+            .putBoolean("is_logged_in", true)
+            .apply();
+    }
+}
+```
+
+Step 5: Create Login Layout
+Location: app/src/main/res/layout/activity_login.xml
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="@color/white">
+
+    <!-- Logo -->
+    <ImageView
+        android:id="@+id/logo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:src="@drawable/ic_logo"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="60dp"/>
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome to MediSafe"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary_blue"
+        app:layout_constraintTop_toBottomOf="@id/logo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="24dp"/>
+
+    <!-- Username Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/username_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/title"
+        android:layout_marginTop="40dp">
+        
+        <EditText
+            android:id="@+id/username_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Username"
+            android:inputType="text"
+            android:padding="16dp"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Password Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/password_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/username_layout"
+        android:layout_marginTop="16dp">
+        
+        <EditText
+            android:id="@+id/password_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:padding="16dp"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Login Button -->
+    <Button
+        android:id="@+id/login_button"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Login"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/password_layout"
+        android:layout_marginTop="32dp"/>
+
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/login_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"/>
+
+    <!-- Sign Up Link -->
+    <TextView
+        android:id="@+id/signup_link"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Don't have an account? Sign Up"
+        android:textColor="@color/primary_red"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="32dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+```
+
+================================================================================
+                    TESTING THE CONNECTION
+================================================================================
+
+Step 1: Start Django Server
+   ```bash
+   cd "D:\DOWNLOADS\PBL - LATEST\PBL - POLISHING OF ALL\pbl"
+   python manage.py runserver 0.0.0.0:8000
+   ```
+   
+   Note: Use 0.0.0.0 to allow connections from other devices
+
+Step 2: Find Your Computer's IP Address
+   Windows: Open CMD and type `ipconfig`
+   Look for: IPv4 Address (e.g., 192.168.1.100)
+
+Step 3: Update Android App BASE_URL
+   In RetrofitClient.java:
+   ```java
+   private static final String BASE_URL = "http://192.168.1.100:8000/";
+   ```
+
+Step 4: Test from Android
+   - Connect phone to same WiFi as computer
+   - Or use Android emulator (use http://10.0.2.2:8000/)
+   - Run the app
+   - Try logging in with existing credentials
+
+Step 5: Check Django Console
+   You should see:
+   ```
+   POST /login/ 200 OK
+   ```
+
+================================================================================
+                    HOW THE AUTHENTICATION WORKS
+================================================================================
+
+STEP-BY-STEP FLOW:
+
+1. USER ENTERS CREDENTIALS IN ANDROID APP
+   Username: "john"
+   Password: "MyPassword123" (plain text)
+
+2. ANDROID SENDS REQUEST TO DJANGO
+   POST http://your-server.com:8000/login/
+   Content-Type: application/json
+   Body: {"username": "john", "password": "MyPassword123"}
+
+3. DJANGO RECEIVES REQUEST
+   - Extracts username and password from JSON
+   - Password is still plain text: "MyPassword123"
+
+4. DJANGO FETCHES USER FROM SUPABASE
+   - SELECT * FROM users WHERE username = 'john';
+   - Gets: password = "pbkdf2_sha256$600000$aB3xK9mP$7fJ2k..."
+
+5. DJANGO CALLS authenticate()
+   - Django's authenticate() extracts salt from hash
+   - Hashes input password: PBKDF2("MyPassword123", salt, 600000)
+   - Compares: computed_hash == stored_hash
+   - Result: Match = True (user authenticated!)
+
+6. DJANGO CREATES SESSION
+   - Generates session ID
+   - Stores in database: django_session table
+   - Returns session cookie to Android
+
+7. DJANGO SENDS RESPONSE TO ANDROID
+   ```json
+   {
+       "success": true,
+       "message": "Login successful",
+       "user_id": 123,
+       "role": "patient",
+       "redirect": "/dashboard"
+   }
+   ```
+   Headers: Set-Cookie: sessionid=abc123xyz...
+
+8. ANDROID STORES SESSION COOKIE
+   - OkHttp's CookieJar automatically saves it
+   - Future requests include this cookie
+
+9. ANDROID MAKES AUTHENTICATED REQUEST
+   GET http://your-server.com:8000/consultations/
+   Cookie: sessionid=abc123xyz...
+
+10. DJANGO VALIDATES SESSION
+    - Checks session ID in database
+    - Returns user data if valid
+    - Returns 401 if invalid/expired
+
+================================================================================
+                    KEY POINTS FOR ANDROID DEVELOPER
+================================================================================
+
+1. YOU DON'T HASH PASSWORDS IN ANDROID
+   ✓ Django does all the hashing
+   ✓ Android just sends plain password over HTTPS
+   ✓ HTTPS encrypts the connection, protecting password in transit
+
+2. YOU DON'T STORE PASSWORDS IN ANDROID
+   ✓ After login, Django sends session cookie
+   ✓ Android stores session cookie (not password)
+   ✓ Session cookie is used for all future requests
+
+3. SESSION COOKIES ARE AUTOMATIC
+   ✓ OkHttp's CookieJar handles cookies automatically
+   ✓ You don't manually set Cookie header
+   ✓ Just make requests, cookies are sent automatically
+
+4. SAME CREDENTIALS WORK EVERYWHERE
+   ✓ User creates account on website
+   ✓ Password is hashed and stored in Supabase
+   ✓ Same username/password works in Android app
+   ✓ Both use same Django backend = same database
+
+5. NO DIRECT SUPABASE ACCESS FROM ANDROID
+   ✓ Never use Supabase SDK in Android
+   ✓ Never expose Supabase credentials
+   ✓ Always go through Django API
+   ✓ Django enforces security and business logic
+
+================================================================================
+                    COMMON ISSUES AND SOLUTIONS
+================================================================================
+
+ISSUE 1: Network Error / Connection Refused
+   Problem: Android can't reach Django server
+   Solution:
+   - Ensure Django runs on 0.0.0.0:8000 (not 127.0.0.1)
+   - Check firewall allows port 8000
+   - Use correct IP (10.0.2.2 for emulator, 192.168.x.x for device)
+   - Phone and computer on same WiFi network
+
+ISSUE 2: 403 Forbidden / CSRF Error
+   Problem: Django blocking Android requests
+   Solution:
+   - Add @csrf_exempt decorator to view
+   - Or implement CSRF token handling in Android
+   - Or use Django REST Framework (handles this automatically)
+
+ISSUE 3: 401 Unauthorized on Second Request
+   Problem: Session cookie not being sent
+   Solution:
+   - Ensure CookieJar is configured in OkHttp
+   - Check cookies are saved from login response
+   - Verify sessionid cookie is sent with requests
+
+ISSUE 4: JSON Parse Error
+   Problem: Django returns HTML instead of JSON
+   Solution:
+   - Check Django view returns JsonResponse
+   - Verify Content-Type is application/json
+   - Check for Django error pages (DEBUG=True)
+
+ISSUE 5: Slow Response
+   Problem: Password hashing takes time
+   Solution:
+   - 600,000 iterations take ~0.5 seconds (by design)
+   - Show loading indicator in UI
+   - This is NORMAL and necessary for security
+
+================================================================================
+                    PRODUCTION DEPLOYMENT
+================================================================================
+
+When deploying to production:
+
+1. DEPLOY DJANGO TO CLOUD SERVER
+   Options:
+   - Heroku
+   - AWS EC2
+   - DigitalOcean
+   - Google Cloud
+   - Azure
+
+2. GET HTTPS CERTIFICATE
+   - Use Let's Encrypt (free)
+   - Or cloud provider's certificate
+   - HTTPS is REQUIRED for production
+
+3. UPDATE ANDROID APP BASE_URL
+   ```java
+   private static final String BASE_URL = "https://your-domain.com/api/";
+   ```
+
+4. REMOVE CLEARTEXT TRAFFIC
+   Update network_security_config.xml:
+   ```xml
+   <network-security-config>
+       <domain-config cleartextTrafficPermitted="false">
+           <domain includeSubdomains="true">your-domain.com</domain>
+       </domain-config>
+   </network-security-config>
+   ```
+
+5. IMPLEMENT TOKEN AUTHENTICATION (Optional but Recommended)
+   Install Django REST Framework + JWT:
+   ```bash
+   pip install djangorestframework
+   pip install djangorestframework-simplejwt
+   ```
+   
+   Benefits:
+   - No session cookies needed
+   - Better for mobile apps
+   - Token expires automatically
+   - Can refresh tokens
+
+================================================================================
+                    ALTERNATIVE: DJANGO REST FRAMEWORK
+================================================================================
+
+For better Android integration, consider using Django REST Framework:
+
+1. Install DRF
+   ```bash
+   pip install djangorestframework
+   pip install djangorestframework-simplejwt
+   ```
+
+2. Update settings.py
+   ```python
+   INSTALLED_APPS = [
+       # ... other apps ...
+       'rest_framework',
+       'rest_framework_simplejwt',
+   ]
+   
+   REST_FRAMEWORK = {
+       'DEFAULT_AUTHENTICATION_CLASSES': [
+           'rest_framework_simplejwt.authentication.JWTAuthentication',
+       ],
+   }
+   ```
+
+3. Create API views
+   ```python
+   from rest_framework.decorators import api_view
+   from rest_framework.response import Response
+   from rest_framework_simplejwt.tokens import RefreshToken
+   
+   @api_view(['POST'])
+   def login(request):
+       username = request.data.get('username')
+       password = request.data.get('password')
+       
+       user = authenticate(username=username, password=password)
+       
+       if user is not None:
+           refresh = RefreshToken.for_user(user)
+           return Response({
+               'success': True,
+               'access': str(refresh.access_token),
+               'refresh': str(refresh),
+               'user_id': user.user_id,
+               'role': user.role
+           })
+       else:
+           return Response({
+               'success': False,
+               'message': 'Invalid credentials'
+           }, status=401)
+   ```
+
+4. Android stores JWT token
+   ```java
+   // Save token
+   SharedPreferences prefs = context.getSharedPreferences("app", MODE_PRIVATE);
+   prefs.edit().putString("access_token", token).apply();
+   
+   // Use token in requests
+   @Headers("Authorization: Bearer {token}")
+   @GET("consultations/")
+   Call<AppointmentsResponse> getAppointments(@Path("token") String token);
+   ```
+
+Benefits of JWT:
+- No session management needed
+- Token contains user info
+- Can set expiration time
+- Better for microservices
+
+================================================================================
+                    SUMMARY: WHAT MAKES THIS WORK
+================================================================================
+
+The MAGIC that makes Android work with website's hashed passwords:
+
+1. SHARED BACKEND
+   - Website → Django → Supabase
+   - Android → Django → Supabase
+   - SAME Django, SAME Database = SAME authentication
+
+2. SERVER-SIDE HASHING
+   - Password hashing happens in Django (server)
+   - Not in website JavaScript
+   - Not in Android app
+   - BOTH send plain password to Django
+   - Django hashes and compares
+
+3. HTTPS ENCRYPTION
+   - Plain password is encrypted in transit
+   - HTTPS protects password from interception
+   - Server decrypts and hashes password
+   - Hash never leaves server
+
+4. STATELESS OR STATEFUL AUTH
+   - Session cookies: Server stores session
+   - JWT tokens: Client stores token
+   - Both work with hashed passwords
+   - Choice depends on preference
+
+THE ANSWER TO YOUR QUESTION:
+"How can Android use hashed passwords from website?"
+
+Android DOESN'T use the hashed passwords directly!
+Android sends plain password → Django hashes it → Django compares with stored hash
+
+It's the SAME process as the website:
+Website form → Django → Hash & Compare → Success/Fail
+Android app  → Django → Hash & Compare → Success/Fail
+
+Both paths end up at Django's authenticate() function, which handles all hashing!
+
+================================================================================
+                    FILES TO CREATE IN ANDROID PROJECT
+================================================================================
+
+1. app/src/main/AndroidManifest.xml (permissions)
+2. app/src/main/res/xml/network_security_config.xml (HTTPS config)
+3. app/build.gradle (dependencies)
+4. app/src/main/java/com/medisafe/api/MedisafeAPI.java (API interface)
+5. app/src/main/java/com/medisafe/api/RetrofitClient.java (HTTP client)
+6. app/src/main/java/com/medisafe/models/LoginRequest.java (data model)
+7. app/src/main/java/com/medisafe/models/LoginResponse.java (data model)
+8. app/src/main/java/com/medisafe/LoginActivity.java (login screen)
+9. app/src/main/res/layout/activity_login.xml (UI layout)
+
+================================================================================
+                    NEXT STEPS
+================================================================================
+
+1. Set up Android Studio project
+2. Add Retrofit dependencies to build.gradle
+3. Create the files listed above
+4. Start Django server: python manage.py runserver 0.0.0.0:8000
+5. Update BASE_URL in RetrofitClient.java
+6. Run Android app
+7. Test login with existing website credentials
+8. Implement other features (appointments, prescriptions, etc.)
+
+The authentication is ALREADY WORKING on Django side!
+You just need to connect Android app to it via HTTP requests.
+
+================================================================================
+                    END OF GUIDE
+================================================================================
+
+Your Django backend is READY for Android!
+No changes needed to password hashing - it works perfectly as-is.
+Just implement the HTTP client in Android and you're good to go!
+
+Remember: Both website and Android app are just CLIENTS of the same Django API.
+The password hashing happens on the SERVER, not in the clients.
+
+================================================================================

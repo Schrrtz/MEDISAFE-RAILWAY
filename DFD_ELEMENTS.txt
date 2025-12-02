@@ -1,0 +1,773 @@
+================================================================================
+                   MEDISAFE HEALTHCARE SYSTEM - DFD ELEMENTS
+           Data Flow Diagram Components & Database Connections
+================================================================================
+
+DATABASE: PostgreSQL on Supabase (aws-1-ap-southeast-1.pooler.supabase.com)
+FRAMEWORK: Django 5.2.6 with Custom User Authentication
+PASSWORD HASHING: PBKDF2-SHA256 (600,000 iterations)
+
+================================================================================
+                            EXTERNAL ENTITIES
+================================================================================
+
+1. PATIENT (External User)
+   - Registers account, logs in, books appointments, views records
+   - Interacts with: Authentication, Dashboard, Consultations, Medical Records
+
+2. DOCTOR (External User)
+   - Logs in, manages appointments, creates prescriptions, reviews lab results
+   - Interacts with: Authentication, Doctor Panel, Live Consultations, Prescriptions
+
+3. ADMIN/SUPER ADMIN (External User)
+   - Manages users, monitors system, views analytics, handles password resets
+   - Interacts with: Admin Panel, User Management, Analytics
+
+4. LAB TECHNICIAN (External User)
+   - Uploads lab results, manages test bookings
+   - Interacts with: Lab Results Management
+
+5. NURSE (External User)
+   - Assists with patient management, views records
+   - Interacts with: Patient Records, Appointments
+
+6. GUEST USER (Unauthenticated)
+   - Views homepage, can book consultation without registration
+   - Interacts with: Homepage, Guest Booking
+
+================================================================================
+                              PROCESSES
+================================================================================
+
+PROCESS 1: AUTHENTICATION SYSTEM
+   Input: Username, Password, User Role
+   Process: Validate credentials using PBKDF2 hash comparison, create session
+   Output: Auth token, User session, Role-based redirect
+   Files: myapp/features/auth/views.py
+   Functions:
+      - login() → Validates credentials with authenticate()
+      - signup() → Creates user, auto-hashes password in User.save()
+      - logout() → Destroys session
+      - super_admin_login() → Special CHOWKING/MEDISAFE backdoor
+      - forgot_password() → Creates notification with ID photo for admins
+      - verify_account() → Checks if username/email exists
+   Database Tables: users, user_profiles
+   Data Flows:
+      Patient/Doctor/Admin → [Credentials] → Authentication → [Session Token] → Dashboard
+      New User → [Registration Data] → Authentication → [Hashed Password] → Database
+
+PROCESS 2: USER PROFILE MANAGEMENT
+   Input: User ID, Profile data (name, photo, contact info)
+   Process: Update/retrieve user profile information
+   Output: Updated profile, Profile photo URL
+   Files: myapp/features/profiles/views.py
+   Functions:
+      - userprofile() → Display profile page
+      - update_profile() → Update profile fields
+      - update_profile_photo() → Upload profile photo
+      - update_cover_photo() → Upload cover photo
+      - send_message_to_admin() → Send message to admin
+   Database Tables: user_profiles, users
+   Data Flows:
+      User → [Profile Data] → Profile Management → [Updated Record] → Database
+      User → [Photo File] → Profile Management → [Saved to media/profile_photos/] → Database
+
+PROCESS 3: APPOINTMENT BOOKING & MANAGEMENT
+   Input: Patient ID, Doctor ID, Date, Time, Consultation Type
+   Process: Create appointment, validate availability, generate appointment number
+   Output: Appointment confirmation, Appointment number
+   Files: myapp/features/consultations/views.py
+   Functions:
+      - consultations() → Display consultation page
+      - book_consultation() → Create new appointment
+      - book_consultation_guest() → Guest booking without login
+      - create_appointment() → Admin creates appointment for patient
+      - cancel_consultation() → Cancel existing appointment
+      - get_consultation_details() → Retrieve appointment info
+   Database Tables: appointments, doctors, users
+   Data Flows:
+      Patient → [Booking Request] → Appointment System → [New Appointment] → Database
+      Doctor → [Approval Status] → Appointment System → [Updated Status] → Database
+      System → [Appointment Data] → Notification System → [Alert] → Patient
+
+PROCESS 4: LIVE CONSULTATION SESSION
+   Input: Appointment ID, Doctor notes, Vital signs, Diagnosis
+   Process: Start live session, record medical data, complete consultation
+   Output: Live session record, Medical notes, Session duration
+   Files: myapp/features/doctors/views.py
+   Functions:
+      - live_appointment() → Display live appointment interface
+      - start_live_consultation() → Start new live session
+      - restart_live_consultation() → Resume existing session
+      - update_consultation_data() → Save vital signs, symptoms, diagnosis
+      - complete_consultation() → End session, calculate duration
+   Database Tables: live_appointments, appointments, users, doctors
+   Data Flows:
+      Doctor → [Start Session] → Live Consultation → [live_appointment_number] → Database
+      Doctor → [Medical Data] → Live Consultation → [Vital Signs/Diagnosis] → Database
+      System → [Session End] → Live Consultation → [Duration Calculation] → Database
+
+PROCESS 5: PRESCRIPTION MANAGEMENT
+   Input: Live Appointment ID, Medicines, Instructions, Doctor Signature
+   Process: Create prescription, generate prescription number (RX-prefix), upload file
+   Output: Prescription record, Prescription PDF, Prescription number
+   Files: myapp/features/doctors/views.py, myapp/features/medical/views.py
+   Functions:
+      - create_prescription() → Create new prescription
+      - sign_prescription() → Add doctor signature
+      - generate_prescription_pdf() → Create PDF version
+      - upload_prescription_file() → Upload prescription file
+      - get_all_prescriptions() → List all prescriptions
+      - prescription_details() → View prescription details
+      - download_prescription() → Download prescription file
+      - prescriptions() → Patient view prescriptions
+      - prescription_print() → Print-friendly view
+   Database Tables: prescriptions, live_appointments, doctors
+   Data Flows:
+      Doctor → [Prescription Data] → Prescription System → [RX Number] → Database
+      Doctor → [Signature] → Prescription System → [Base64 Signature] → Database
+      Doctor → [PDF File] → Prescription System → [Saved to media/prescriptions/] → Database
+      Patient → [View Request] → Prescription System → [PDF Download] → Patient
+
+PROCESS 6: LAB RESULTS MANAGEMENT
+   Input: Patient ID, Lab type, Result file
+   Process: Upload lab results, store file, notify patient
+   Output: Lab result record, File URL, Notification
+   Files: myapp/features/medical/views.py, myapp/features/doctors/views.py
+   Functions:
+      - lab_results() → Display lab results page
+      - download_lab_result() → Download result file
+      - view_lab_result() → View result details
+      - patient_lab_results() → Doctor views patient labs
+      - book_lab_service() → Book lab test
+   Database Tables: lab_results, users, booked_services
+   Data Flows:
+      Lab Tech → [Lab File] → Lab System → [Saved to media/] → Database
+      System → [New Lab Result] → Notification System → [Alert] → Patient
+      Patient/Doctor → [View Request] → Lab System → [File Download] → User
+
+PROCESS 7: NOTIFICATION SYSTEM
+   Input: User ID, Notification type, Message, Priority
+   Process: Create notification, mark as read/unread, send alerts
+   Output: Notification record, Unread count
+   Files: myapp/features/medical/views.py
+   Functions:
+      - alertnotification() → Display notifications page
+      - mark_notification_read() → Mark as read
+      - dismiss_notification() → Delete notification
+      - get_notification_count() → Get unread count
+      - get_unread_notifications() → Fetch unread notifications
+      - api_mark_notification_read() → API endpoint to mark read
+      - get_password_reset_notifications() → Admin password reset notifications
+   Database Tables: notifications, users
+   Data Flows:
+      System Event → [Trigger] → Notification System → [New Notification] → Database
+      User → [Read Action] → Notification System → [is_read=True] → Database
+      Password Reset → [Request] → Notification System → [Admin Alert] → Admin
+      System → [Count Query] → Notification System → [Unread Count] → User Interface
+
+PROCESS 8: ADMIN USER MANAGEMENT
+   Input: User data, Role, Status changes
+   Process: Create/update/delete users, manage roles, handle password resets
+   Output: User records, Role permissions, Password reset approvals
+   Files: myapp/features/admin/user_views.py, myapp/features/admin/user_views_fixed.py
+   Functions:
+      - mod_users() → User management interface
+      - download_password_reset_file() → Download ID photo
+      - mark_password_reset_read() → Mark password reset as processed
+      - get_password_reset_requests() → Fetch password reset requests
+      - permanent_delete_account() → Delete user account
+   Database Tables: users, user_profiles, notifications, role_permissions
+   Data Flows:
+      Admin → [User Action] → User Management → [User CRUD] → Database
+      Patient → [Password Reset] → User Management → [Notification] → Admin
+      Admin → [Approve Reset] → User Management → [SMS Notification] → Patient
+
+PROCESS 9: ADMIN PATIENT MANAGEMENT
+   Input: Patient data, Appointments, Services, Lab bookings
+   Process: Manage patient records, update services, view statistics
+   Output: Patient records, Service bookings, Statistics
+   Files: myapp/features/admin/patient_views.py
+   Functions:
+      - mod_patients() → Patient management interface
+      - update_booked_service() → Update service booking
+      - delete_booked_service() → Delete service booking
+      - get_patient_stats() → Get patient statistics
+      - admin_prescription_download() → Download prescription
+   Database Tables: users, user_profiles, appointments, booked_services, patients
+   Data Flows:
+      Admin → [Patient Query] → Patient Management → [Patient Data] → Admin Interface
+      Admin → [Service Update] → Patient Management → [Updated Booking] → Database
+
+PROCESS 10: ANALYTICS & REPORTING
+   Input: System data (users, appointments, lab results)
+   Process: Aggregate data, generate statistics, create charts
+   Output: Analytics dashboard, Statistics reports, Trends
+   Files: myapp/features/admin/analytics_views.py
+   Functions:
+      - analytics() → Display analytics dashboard
+      - analytics_api() → API endpoint for analytics data
+      - get_dynamic_statistics() → Real-time statistics
+   Database Tables: users, appointments, lab_results, prescriptions, notifications
+   Data Flows:
+      System → [Aggregate Query] → Analytics → [Statistics] → Admin Dashboard
+      Admin → [Date Range Filter] → Analytics → [Filtered Stats] → Admin Interface
+
+PROCESS 11: DOCTOR PANEL DASHBOARD
+   Input: Doctor ID, Appointment data, Patient data
+   Process: Display dashboard, search patients, manage appointments
+   Output: Dashboard view, Patient list, Appointment list
+   Files: myapp/features/doctors/views.py
+   Functions:
+      - doctor_panel() → Display doctor dashboard
+      - search_patients() → Search for patients
+      - update_doctor_profile() → Update doctor profile
+   Database Tables: doctors, users, appointments, lab_results, prescriptions
+   Data Flows:
+      Doctor → [Login] → Doctor Panel → [Dashboard Data] → Doctor Interface
+      Doctor → [Search Query] → Doctor Panel → [Patient Results] → Doctor Interface
+
+PROCESS 12: DASHBOARD (Patient/General)
+   Input: User ID, User role
+   Process: Display role-specific dashboard with relevant data
+   Output: Dashboard view with personalized data
+   Files: myapp/features/dashboard/views.py
+   Functions:
+      - dashboard() → Display user dashboard
+   Database Tables: users, appointments, lab_results, notifications
+   Data Flows:
+      User → [Login] → Dashboard → [Role-based Data] → User Interface
+
+PROCESS 13: SERVICE BOOKING
+   Input: User ID, Service name, Date, Time
+   Process: Book medical services (X-ray, blood test, etc.)
+   Output: Service booking record
+   Files: myapp/features/medical/views.py
+   Functions:
+      - book_service() → Book medical service
+      - get_service_details() → Get service information
+      - book_lab_service() → Book lab service specifically
+   Database Tables: booked_services, users
+   Data Flows:
+      Patient → [Service Request] → Booking System → [New Booking] → Database
+      System → [Booking Confirmation] → Notification System → [Alert] → Patient
+
+PROCESS 14: HOMEPAGE & PUBLIC INTERFACE
+   Input: None (public access)
+   Process: Display homepage, services, contact info
+   Output: Homepage view
+   Files: myapp/features/home/views.py
+   Functions:
+      - homepage2() → Display homepage
+   Database Tables: None (static content)
+   Data Flows:
+      Guest → [Page Request] → Homepage → [HTML Response] → Guest Browser
+
+================================================================================
+                             DATA STORES
+================================================================================
+
+DS1: USERS TABLE (users)
+   Primary Key: user_id (AutoField)
+   Fields:
+      - email (EmailField, unique)
+      - username (CharField, unique)
+      - password (TextField) - Stores PBKDF2-SHA256 hash
+      - role (CharField) - 'admin', 'doctor', 'nurse', 'lab_tech', 'patient'
+      - status (BooleanField) - Active/Inactive
+      - date_joined (DateTimeField)
+      - is_active, is_staff, is_superuser (BooleanField)
+      - last_login (DateTimeField)
+   Relationships:
+      - One-to-One with UserProfile
+      - One-to-One with Doctor (if role=doctor)
+      - One-to-One with Patient
+      - One-to-Many with Appointments (as patient)
+      - One-to-Many with LabResults
+      - One-to-Many with Notifications
+      - One-to-Many with BookedServices
+   Used By: Authentication, Profile, Admin, All Processes
+
+DS2: USER_PROFILES TABLE (user_profiles)
+   Primary Key: profile_id (AutoField)
+   Foreign Key: user_id → users.user_id (OneToOne)
+   Fields:
+      - first_name, middle_name, last_name (CharField)
+      - birthday (DateField)
+      - email (EmailField)
+      - sex (CharField) - 'male', 'female', 'other'
+      - civil_status (CharField)
+      - address (TextField)
+      - contact_person, relationship_to_patient (CharField)
+      - contact_number, phone_number, phone_type (CharField)
+      - photo_url (ImageField) → media/profile_photos/
+      - data_privacy_consent (BooleanField)
+      - consent_date (DateTimeField)
+   Used By: Profile Management, Admin, Dashboard
+
+DS3: DOCTORS TABLE (doctors)
+   Primary Key: doctor_id (AutoField)
+   Foreign Key: user_id → users.user_id (OneToOne)
+   Fields:
+      - specialization (CharField)
+      - license_number (CharField, unique)
+      - years_of_experience (IntegerField)
+      - availability (JSONField) - Schedule data
+      - contact_info (TextField)
+   Relationships:
+      - One-to-Many with Appointments
+      - One-to-Many with Prescriptions
+   Used By: Appointment Booking, Live Consultation, Doctor Panel
+
+DS4: PATIENTS TABLE (patients)
+   Primary Key: patient_id (AutoField)
+   Foreign Key: user_id → users.user_id (OneToOne)
+   Fields:
+      - client_id → users.user_id (if registered by client)
+      - medical_record_number (CharField, unique)
+      - date_of_birth (DateField)
+      - gender (CharField) - 'M', 'F', 'O'
+      - blood_type (CharField)
+      - allergies, conditions (TextField)
+      - emergency_contact_name, emergency_contact_phone (CharField)
+      - created_at, updated_at (DateTimeField)
+   Used By: Patient Management, Medical Records
+
+DS5: APPOINTMENTS TABLE (appointments)
+   Primary Key: consultation_id (AutoField)
+   Foreign Keys:
+      - patient_id → users.user_id
+      - doctor_id → doctors.doctor_id
+   Fields:
+      - appointment_number (CharField) - Unique identifier
+      - consultation_type (CharField) - 'F2F', 'Tele'
+      - consultation_date (DateField)
+      - consultation_time (TimeField)
+      - approval_status (CharField) - 'Pending', 'Approved', 'Rejected'
+      - approved_at (DateTimeField)
+      - status (CharField) - 'Scheduled', 'Completed', 'Cancelled'
+      - notes, reason_for_visit (TextField)
+      - meeting_link (TextField)
+      - duration_minutes (IntegerField)
+      - reminder_sent (BooleanField)
+      - reminder_sent_at (DateTimeField)
+      - created_at, updated_at (DateTimeField)
+   Relationships:
+      - One-to-One with LiveAppointment
+   Used By: Appointment Management, Dashboard, Doctor Panel, Analytics
+
+DS6: LIVE_APPOINTMENTS TABLE (live_appointments)
+   Primary Key: live_appointment_id (AutoField)
+   Foreign Key: appointment_id → appointments.consultation_id (OneToOne)
+   Fields:
+      - live_appointment_number (CharField, unique) - Copies appointment_number
+      - status (CharField) - 'waiting', 'in_progress', 'completed', 'cancelled'
+      - started_at, completed_at (DateTimeField)
+      - session_duration (IntegerField) - Minutes
+      - vital_signs (JSONField) - BP, HR, Temp, etc.
+      - symptoms, diagnosis, clinical_notes (TextField)
+      - treatment_plan, follow_up_notes (TextField)
+      - doctor_notes, recommendations (TextField)
+      - created_at, updated_at (DateTimeField)
+   Relationships:
+      - One-to-Many with Prescriptions
+   Used By: Live Consultation, Doctor Panel
+
+DS7: PRESCRIPTIONS TABLE (prescriptions)
+   Primary Key: prescription_id (AutoField)
+   Foreign Keys:
+      - live_appointment_id → live_appointments.live_appointment_id
+      - doctor_id → doctors.doctor_id
+   Fields:
+      - prescription_number (CharField, unique) - Format: RX[UUID8]
+      - medicines (JSONField) - List of medicine objects
+      - instructions, follow_up_instructions (TextField)
+      - follow_up_date (DateField)
+      - doctor_signature (TextField) - Base64 encoded
+      - signature_date (DateTimeField)
+      - prescription_file (FileField) → media/prescriptions/
+      - status (CharField) - 'draft', 'signed', 'printed', 'cancelled'
+      - created_at, updated_at (DateTimeField)
+   Used By: Prescription Management, Doctor Panel, Medical Records
+
+DS8: LAB_RESULTS TABLE (lab_results)
+   Primary Key: lab_result_id (AutoField)
+   Foreign Keys:
+      - user_id → users.user_id
+      - uploaded_by_id → users.user_id
+   Fields:
+      - lab_type (CharField)
+      - result_file (TextField) - File path or base64
+      - file_type (CharField)
+      - file_name (CharField)
+      - upload_date (DateTimeField)
+      - notes (TextField)
+   Used By: Lab Results Management, Doctor Panel, Medical Records
+
+DS9: NOTIFICATIONS TABLE (notifications)
+   Primary Key: notification_id (AutoField)
+   Foreign Key: user_id → users.user_id
+   Fields:
+      - title (CharField)
+      - message (TextField)
+      - notification_type (CharField) - 'account', 'urgent', 'appointment', 'lab_result', 'system', 'password_reset'
+      - is_read (BooleanField)
+      - priority (CharField) - 'low', 'medium', 'high', 'urgent'
+      - related_id (IntegerField) - Links to appointment/lab/etc
+      - file (FileField) → media/notifications/ - For ID photos
+      - created_at, updated_at (DateTimeField)
+   Used By: Notification System, All User Interfaces
+
+DS10: BOOKED_SERVICES TABLE (booked_services)
+   Primary Key: booking_id (AutoField)
+   Foreign Key: user_id → users.user_id
+   Fields:
+      - service_name (CharField)
+      - booking_date (DateField)
+      - booking_time (TimeField)
+      - status (CharField) - 'Pending', 'Confirmed', 'Completed', 'Cancelled'
+      - notes (TextField)
+      - created_at, updated_at (DateTimeField)
+   Used By: Service Booking, Admin Patient Management
+
+DS11: ROLE_PERMISSIONS TABLE (role_permissions)
+   Primary Key: permission_id (AutoField)
+   Fields:
+      - role (CharField, unique) - 'doctor', 'nurse', 'lab_tech', 'patient'
+      - is_enabled (BooleanField)
+      - created_at, updated_at (DateTimeField)
+   Used By: Admin Role Management
+
+================================================================================
+                           DATA FLOWS
+================================================================================
+
+FLOW 1: USER REGISTRATION
+   Guest → [Registration Form] → signup() → [Validate Data] → User.save() 
+   → [Hash Password with PBKDF2] → DS1: USERS → [Create Profile] → DS2: USER_PROFILES 
+   → [Success Message] → User
+
+FLOW 2: USER LOGIN
+   User → [Credentials] → login() → [authenticate()] → DS1: USERS 
+   → [check_password() compares hash] → [Create Session] → [Role-based Redirect] 
+   → Dashboard/Doctor Panel/Admin Panel
+
+FLOW 3: APPOINTMENT BOOKING
+   Patient → [Booking Form] → book_consultation() → [Validate Availability] 
+   → [Generate appointment_number] → DS5: APPOINTMENTS → [Create Notification] 
+   → DS9: NOTIFICATIONS → [Confirmation] → Patient
+
+FLOW 4: LIVE CONSULTATION SESSION
+   Doctor → [Start Session] → start_live_consultation() → [Create LiveAppointment] 
+   → DS6: LIVE_APPOINTMENTS → [Input Medical Data] → update_consultation_data() 
+   → [Update vital_signs, diagnosis] → DS6: LIVE_APPOINTMENTS 
+   → [Complete Session] → complete_consultation() → [Calculate Duration] 
+   → DS6: LIVE_APPOINTMENTS
+
+FLOW 5: PRESCRIPTION CREATION
+   Doctor → [Prescription Form] → create_prescription() → [Generate RX Number] 
+   → DS7: PRESCRIPTIONS → [Add Signature] → sign_prescription() 
+   → [Upload PDF] → upload_prescription_file() → media/prescriptions/ 
+   → DS7: PRESCRIPTIONS → [Notify Patient] → DS9: NOTIFICATIONS
+
+FLOW 6: LAB RESULT UPLOAD
+   Lab Tech → [Upload File] → book_lab_service() → [Save File] → media/ 
+   → DS8: LAB_RESULTS → [Create Notification] → DS9: NOTIFICATIONS 
+   → [Alert Patient] → Patient
+
+FLOW 7: NOTIFICATION DELIVERY
+   System Event → [Trigger] → create_notifications_from_data() 
+   → DS9: NOTIFICATIONS → [Fetch Unread] → get_unread_notifications() 
+   → [Display Badge] → User Interface → [User Clicks] → mark_notification_read() 
+   → [Update is_read=True] → DS9: NOTIFICATIONS
+
+FLOW 8: PASSWORD RESET REQUEST
+   Patient → [Forgot Password Form] → forgot_password() → [Upload ID Photo] 
+   → [Find User] → DS1: USERS → [Create Notification for Admins] 
+   → DS9: NOTIFICATIONS (type='password_reset', file=ID photo) 
+   → [Notify All Admins] → Admin Panel → [Admin Reviews] 
+   → download_password_reset_file() → [Admin Approves] 
+   → mark_password_reset_read() → [Send SMS to Patient] → Patient
+
+FLOW 9: ADMIN USER MANAGEMENT
+   Admin → [User Query] → mod_users() → DS1: USERS, DS2: USER_PROFILES 
+   → [Display Users] → Admin Interface → [Update User] → [Update Status/Role] 
+   → DS1: USERS → [Success] → Admin Panel
+
+FLOW 10: ANALYTICS GENERATION
+   Admin → [Analytics Request] → analytics() → [Query All Tables] 
+   → DS1, DS5, DS7, DS8, DS9 → [Aggregate Data] → [Calculate Statistics] 
+   → [Generate Charts] → [Return JSON] → Admin Dashboard
+
+FLOW 11: DOCTOR SEARCHES PATIENT
+   Doctor → [Search Query] → search_patients() → [Query Users & Profiles] 
+   → DS1: USERS, DS2: USER_PROFILES → [Filter by Name/Username] 
+   → [Return Results] → Doctor Panel → [Select Patient] 
+   → patient_lab_results() → DS8: LAB_RESULTS → [Display Results] → Doctor
+
+FLOW 12: PROFILE PHOTO UPDATE
+   User → [Upload Photo] → update_profile_photo() → [Validate File] 
+   → [Save to media/profile_photos/] → [Update photo_url] 
+   → DS2: USER_PROFILES → [Success Message] → User Profile Page
+
+FLOW 13: SERVICE BOOKING
+   Patient → [Service Form] → book_service() → [Validate Date/Time] 
+   → DS10: BOOKED_SERVICES → [Create Notification] → DS9: NOTIFICATIONS 
+   → [Confirmation] → Patient Dashboard
+
+FLOW 14: PRESCRIPTION DOWNLOAD
+   Patient → [View Prescriptions] → prescriptions() → DS7: PRESCRIPTIONS 
+   → [Display List] → Patient → [Download] → prescription_download() 
+   → [Fetch File] → media/prescriptions/ → [Send PDF] → Patient Browser
+
+FLOW 15: APPOINTMENT APPROVAL
+   Patient → [Book Appointment] → DS5: APPOINTMENTS (approval_status='Pending') 
+   → [Notify Doctor] → DS9: NOTIFICATIONS → Doctor Panel → [Approve] 
+   → [Update approval_status='Approved'] → DS5: APPOINTMENTS 
+   → [Notify Patient] → DS9: NOTIFICATIONS
+
+================================================================================
+                        SECURITY & AUTHENTICATION FLOW
+================================================================================
+
+PASSWORD HASHING FLOW:
+   1. User submits plain password → signup()/login()
+   2. signup() calls user.save()
+   3. User.save() method checks if password starts with hash prefix
+   4. If not hashed, calls make_password(plain_password)
+   5. make_password() generates PBKDF2-SHA256 hash (600,000 iterations)
+   6. Format: pbkdf2_sha256$600000$<salt>$<hash>
+   7. Hashed password stored in DS1: USERS.password
+   8. login() calls authenticate(username, password)
+   9. Django's backend uses check_password(plain, hashed)
+   10. If match, returns user; else returns None
+
+SESSION MANAGEMENT:
+   - Django session framework stores session_key in cookies
+   - Session data stored in database (django_session table)
+   - request.user populated from session data
+   - Logout destroys session data
+
+ROLE-BASED ACCESS CONTROL:
+   - Decorators check request.user.role
+   - Patient: Can access dashboard, book appointments, view own records
+   - Doctor: Can access doctor panel, manage appointments, create prescriptions
+   - Admin: Full access to user management, analytics, system settings
+   - Nurse/Lab Tech: Limited access to specific modules
+
+FILE UPLOAD SECURITY:
+   - File type validation (MIME type check)
+   - File size limits (5MB for most uploads)
+   - Files stored in media/ directory outside webroot
+   - Django serves media files in development via static() urlpattern
+   - Production should use nginx/Apache to serve media files
+
+================================================================================
+                         SPECIAL PROCESSES
+================================================================================
+
+SUPER ADMIN BACKDOOR:
+   - Username: CHOWKING, Password: MEDISAFE
+   - Controlled by ALLOW_DEV_ADMIN_LOGIN environment variable
+   - Grants temporary super admin access via session flag
+   - Function: super_admin_login(), exit_super_admin()
+
+APPOINTMENT NUMBER GENERATION:
+   - Generated in create_appointment() or book_consultation()
+   - Format: APT-[TIMESTAMP]-[RANDOM]
+   - Stored in appointments.appointment_number
+   - Copied to live_appointments.live_appointment_number when session starts
+
+PRESCRIPTION NUMBER GENERATION:
+   - Generated in Prescription.save() method
+   - Format: RX[UUID8] (e.g., RX3E6ACC9F)
+   - Uses Python uuid.uuid4()[:8].upper()
+   - Stored in prescriptions.prescription_number
+
+LIVE SESSION DURATION CALCULATION:
+   - LiveAppointment.get_duration() calculates minutes
+   - Formula: (completed_at - started_at).total_seconds() / 60
+   - Stored in session_duration field on completion
+
+NOTIFICATION PRIORITY:
+   - 'urgent': Password resets, critical alerts
+   - 'high': Appointment reminders, lab results ready
+   - 'medium': General notifications
+   - 'low': System messages
+
+================================================================================
+                            URLS MAPPING
+================================================================================
+
+AUTHENTICATION URLS (myapp/features/auth/):
+   /login/ → login()
+   /signup/ → signup()
+   /logout/ → logout()
+   /forgot-password/ → forgot_password()
+   /verify-account/ → verify_account()
+   /super-admin-login/ → super_admin_login()
+   /exit-super-admin/ → exit_super_admin()
+
+DASHBOARD URLS (myapp/features/dashboard/):
+   /dashboard/ → dashboard()
+
+PROFILE URLS (myapp/features/profiles/):
+   /userprofile/ → userprofile()
+   /update-profile/ → update_profile()
+   /update-profile-photo/ → update_profile_photo()
+   /update-cover-photo/ → update_cover_photo()
+   /send-message-to-admin/ → send_message_to_admin()
+
+CONSULTATION URLS (myapp/features/consultations/):
+   /consultations/ → consultations()
+   /book-consultation/ → book_consultation()
+   /book-consultation-guest/ → book_consultation_guest()
+   /cancel-consultation/ → cancel_consultation()
+   /create-appointment/ → create_appointment()
+   /consultation/<id>/ → get_consultation_details()
+
+MEDICAL URLS (myapp/features/medical/):
+   /lab-results/ → lab_results()
+   /lab-results/<id>/download/ → download_lab_result()
+   /lab-results/<id>/view/ → view_lab_result()
+   /prescriptions/ → prescriptions()
+   /prescriptions/<id>/print/ → prescription_print()
+   /prescriptions/<id>/view/ → prescription_view()
+   /prescriptions/<id>/download/ → prescription_download()
+   /notifications/ → alertnotification()
+   /notifications/<id>/read/ → mark_notification_read()
+   /notifications/<id>/dismiss/ → dismiss_notification()
+   /book-service/ → book_service()
+   /book-lab-service/ → book_lab_service()
+
+DOCTOR URLS (myapp/features/doctors/):
+   /doctor-panel/ → doctor_panel()
+   /doctor/search-patients/ → search_patients()
+   /doctor/patient/<id>/labs/ → patient_lab_results()
+   /doctor/live-appointment/ → live_appointment()
+   /doctor/start-consultation/<id>/ → start_live_consultation()
+   /doctor/update-consultation/<id>/ → update_consultation_data()
+   /doctor/complete-consultation/<id>/ → complete_consultation()
+   /doctor/create-prescription/<id>/ → create_prescription()
+   /doctor/sign-prescription/<id>/ → sign_prescription()
+   /doctor/upload-prescription/<id>/ → upload_prescription_file()
+   /doctor/prescriptions/ → get_all_prescriptions()
+
+ADMIN URLS (myapp/features/admin/):
+   /admin-panel/users/ → mod_users()
+   /admin-panel/patients/ → mod_patients()
+   /admin-panel/analytics/ → analytics()
+   /admin-panel/password-reset/<id>/download/ → download_password_reset_file()
+   /admin-panel/password-reset/<id>/mark-read/ → mark_password_reset_read()
+
+HOME URLS (myapp/features/home/):
+   / → homepage2()
+
+================================================================================
+                          DEPLOYMENT INFO
+================================================================================
+
+DATABASE CONNECTION:
+   Host: aws-1-ap-southeast-1.pooler.supabase.com
+   Port: 5432
+   Database: postgres
+   User: postgres.wqoluwmdzljpvzimjiyr
+   Password: Chowkings6229521 (hardcoded fallback, use DB_PASSWORD env var)
+   SSL Mode: require
+   Connection Pooling: Supabase connection pooler
+
+ENVIRONMENT VARIABLES (from settings.py):
+   - DJANGO_SECRET_KEY: Django secret key
+   - DJANGO_DEBUG: Debug mode (True/False)
+   - DJANGO_ALLOWED_HOSTS: Comma-separated hosts
+   - DB_ENGINE: Database engine (default: django.db.backends.postgresql)
+   - DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT: Database credentials
+   - DB_SSLMODE: SSL mode (default: require)
+   - DB_CONN_MAX_AGE: Connection max age in seconds (default: 0)
+   - ALLOW_DEV_ADMIN_LOGIN: Enable CHOWKING backdoor (True/False)
+
+MEDIA FILES:
+   MEDIA_ROOT: BASE_DIR / 'media'
+   MEDIA_URL: /media/
+   Subdirectories:
+      - media/profile_photos/
+      - media/cover_photos/
+      - media/prescriptions/
+      - media/notifications/
+      - media/logo/
+      - media/LAB PICTURES/
+      - media/HOMEPAGE PICTURES/
+
+STATIC FILES:
+   STATIC_URL: /static/
+   Directories: myapp/static/
+
+================================================================================
+                        DFD DIAGRAM NOTATION
+================================================================================
+
+SYMBOLS TO USE:
+   □ = External Entity (Patient, Doctor, Admin, etc.)
+   ○ = Process (Login, Book Appointment, etc.)
+   ▬ = Data Store (Database Tables)
+   → = Data Flow (arrows with labels)
+
+LEVELS:
+   Level 0 (Context Diagram):
+      - Show system as single process
+      - External entities: Patient, Doctor, Admin, Guest
+      - High-level data flows
+
+   Level 1 (Main Processes):
+      - Authentication System
+      - Appointment Management
+      - Medical Records Management
+      - Prescription Management
+      - Notification System
+      - Admin Management
+      - Doctor Portal
+      - User Dashboard
+
+   Level 2 (Detailed Processes):
+      - Break down each Level 1 process into sub-processes
+      - Show specific database tables
+      - Show detailed data flows
+
+================================================================================
+                          KEY RELATIONSHIPS
+================================================================================
+
+USER HIERARCHY:
+   User (base)
+      ├── UserProfile (1:1)
+      ├── Doctor (1:1, if role=doctor)
+      ├── Patient (1:1, if role=patient)
+      ├── Appointments (1:N, as patient)
+      ├── LabResults (1:N)
+      ├── Notifications (1:N)
+      └── BookedServices (1:N)
+
+APPOINTMENT FLOW:
+   Appointment (consultation_id)
+      ├── LiveAppointment (1:1)
+      │   └── Prescriptions (1:N)
+      ├── Patient (FK to User)
+      └── Doctor (FK to Doctor)
+
+MEDICAL RECORDS:
+   Patient
+      ├── Appointments (via User)
+      ├── LabResults (via User)
+      └── Prescriptions (via LiveAppointment → Appointment)
+
+NOTIFICATION TRIGGERS:
+   - New appointment booked → Notify doctor
+   - Appointment approved → Notify patient
+   - Lab result uploaded → Notify patient
+   - Password reset requested → Notify all admins
+   - Prescription created → Notify patient
+   - Service booking confirmed → Notify patient
+
+================================================================================
+                            END OF DOCUMENT
+================================================================================

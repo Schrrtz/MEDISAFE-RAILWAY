@@ -1,0 +1,461 @@
+   :root{
+      --ink:#213A57;--muted:#5b738b;--panel:#ffffff;--ring:#e2e8f0;
+      --c1:#0B6477;--c2:#14919B;--c3:#213A57;--red:#DC2626;--brand:#213A57;
+  --grad-1: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      --grad-2: linear-gradient(90deg, var(--c1), var(--c2));
+      --bg-grad: linear-gradient(135deg, #ff0000 25%, #ff0000 50%, #213A57 100%);
+    }
+    *{box-sizing:border-box}
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(120deg, #332464 10%, #ff0000 60%, #213A57 100%);
+    background-size: 200% 200%;
+    animation: bgShift 8s ease-in-out infinite;
+  }
+    .layout{min-height:100vh;display:flex;flex-direction:column}
+    header.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e5e7eb;background:#ffffff;color:var(--ink)}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;color:var(--brand)}
+    .brand i{color:var(--c1)}
+    .nav{display:flex;align-items:center;gap:8px;position:relative}
+    .nav a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--brand);padding:8px 12px;border-radius:999px;font-weight:700;transition:transform .15s ease, opacity .15s ease}
+    .nav a:hover{opacity:.9;transform:translateY(-1px);color:var(--c3)}
+    .nav a.active {
+      background: linear-gradient(90deg, #332464 0%, #b62121ff 100%);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(33, 58, 87, 0.18);
+      border-radius: 999px;
+    }
+    .chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255, 0, 0, 0.12);color:var(--c3);border:1px solid rgba(11,100,119,.25);backdrop-filter:blur(6px);border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800}
+    .menu-btn{display:none;border:1px solid rgba(119, 11, 11, 0.35);color:var(--c3);border-radius:10px;padding:8px 10px;background:#fff}
+    .user{display:flex;align-items:center;gap:10px}
+    .avatar{width:36px;height:36px;border-radius:999px;background:var(--c3);color:#fff;display:grid;place-items:center;font-weight:800;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+    main{padding:18px}
+    .page-title{font-size:20px;font-weight:900;margin:0 0 14px;color:#fff}
+    .grid4{display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:14px;width:100%}
+    .card{background:var(--panel);border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 24px rgba(2,6,23,.06);overflow:hidden}
+    .card .head{padding:12px 14px;border-bottom:1px solid #eef2f7;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(90deg,#f8fbff,#ffffff)}
+    .card .body{padding:14px}
+    .kpi{font-size:28px;font-weight:900}
+    .kpi-row{display:flex;align-items:center;gap:12px}
+    .kpi-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--grad-2);box-shadow:0 8px 18px rgba(20,145,155,.25)}
+    .kpi-meta{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px}
+    .list{display:grid;gap:10px}
+    .row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid #eef2f7;border-radius:12px;background:#fff;overflow:hidden}
+    .row .left{display:flex;align-items:center;gap:12px}
+    .pill{background:#eef2ff;color:#0B3D91;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}
+    .pill.red{background:#fee2e2;color:#7f1d1d}
+    .pill.dark{background:var(--grad-2);color:#fff;border:none}
+    .btn-grad, .view-profile-btn {
+    /* Make View Profile button/icon red gradient */
+    &.view-profile-btn, .view-profile-btn {
+      background: linear-gradient(135deg,#dc2626 0%,#b91c1c 100%) !important;
+      color: #fff !important;
+      box-shadow: 0 2px 8px rgba(220,38,38,.18);
+    }
+    /* Change Edit button color when active/clicked */
+    &.active, &:active, &:focus {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+      color: #fff !important;
+      box-shadow: 0 2px 8px rgba(220,38,38,.18);
+    }
+    /* Make edit icon red inside action buttons */
+    i.fa-edit {
+      color: #ffffffff !important;
+    }
+      background: var(--grad-1);
+      color: #ffffffff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      box-shadow: 0 2px 8px rgba(220,38,38,.12);
+    }
+    @keyframes bgShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    /* profile dropdown */
+    .hdr-actions{display:flex;align-items:center;gap:10px}
+    .icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid rgba(0,0,0,.08);display:grid;place-items:center;background:#fff;color:var(--c3)}
+    .icon-btn:hover{background:#f8fafc}
+    .user-btn{display:flex;align-items:center;gap:8px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:999px;padding:6px 10px;color:#fff}
+    .caret{transition:transform .15s ease}
+    .dropdown{position:absolute;right:16px;top:64px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(2,6,23,.15);padding:8px;width:220px;display:none}
+    .dropdown.show{display:block}
+    .dd-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;color:var(--brand);text-decoration:none}
+    .dd-item:hover{background:#f8fafc}
+    .dd-item.logout{color:#b91c1c}
+    .grid2{display:grid;grid-template-columns: 1.3fr 1fr; gap:14px;margin-top:16px}
+    .notif-list{display:grid;gap:10px}
+    .badge{background:#ef4444;color:#fff;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800}
+    .tag{background:#eef2ff;color:#213A57;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800}
+    /* appointments */
+    .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .seg{display:flex;gap:8px}
+    .seg button{border:1px solid #e5e7eb;background:#fff;padding:6px 10px;border-radius:10px;font-weight:800;color:var(--brand)}
+    .seg button.active{background:var(--c3);color:#fff;border-color:var(--c3)}
+    .filters{display:flex;gap:8px;margin:10px 0}
+    .filters .chip{background:#0b0f19;color:#fff;border:none}
+    .appt-card{display:flex;align-items:center;justify-content:space-between;border:1px solid #eef2f7;border-radius:14px;background:#fff;padding:14px;overflow:hidden}
+    .appt-left{display:flex;align-items:center;gap:12px}
+    .dot{width:36px;height:36px;border-radius:999px;background:#0b0f19;color:#fff;display:grid;place-items:center;font-weight:900}
+    .appt-meta{display:flex;align-items:center;gap:14px;color:#64748b;font-size:12px}
+    .menu{border:1px solid #e5e7eb;border-radius:10px;padding:8px;background:#fff;overflow:hidden}
+    .calendar{border:1px solid #e5e7eb;border-radius:14px;padding:14px;overflow:hidden}
+    .cal-grid{display:grid;grid-template-columns: repeat(7, 1fr); gap:12px;margin-top:12px}
+    .cal-cell{border:1px solid #e5e7eb;border-radius:10px;min-height:90px;display:grid;place-items:center;color:#334155;background:#fff;overflow:hidden}
+    .cal-day{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;padding:8px;text-align:center;font-weight:800;color:#334155;overflow:hidden}
+    .mini-badge{background:#0b0f19;color:#fff;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800}
+    /* ===== RESPONSIVE DESIGN ===== */
+    
+    /* Tablet & Small Desktop (max-width: 1200px) */
+    @media(max-width:1200px){
+      .dashboard-grid{grid-template-columns:1fr;gap:20px}
+      .grid4{grid-template-columns:repeat(2, 1fr);gap:12px}
+      .grid2{grid-template-columns:1fr;gap:14px}
+      main{padding:14px}
+      .dashboard-card{min-height:auto}
+      .dashboard-card-content{padding:14px 18px}
+    }
+    
+    /* Tablet Portrait (max-width: 1000px) */
+    @media(max-width:1000px){
+      .nav{display:none;position:absolute;left:0;right:0;top:56px;background:#ffffff;border-bottom:1px solid rgba(0,0,0,.08);padding:8px 12px;flex-wrap:wrap;z-index:999}
+      .nav.show{display:flex}
+      .menu-btn{display:inline-flex}
+      .grid4{grid-template-columns:1fr 1fr;gap:10px}
+      .row{flex-wrap:wrap;gap:8px}
+      .dashboard-grid{grid-template-columns:1fr;gap:16px}
+      .dashboard-card-header{font-size:1.1rem;padding:14px 18px}
+      .dashboard-card-header i{font-size:1.4rem}
+      .card .head{padding:10px 12px;font-size:14px}
+      .card .body{padding:12px}
+      header.top{padding:10px 14px}
+      .page-title{font-size:18px}
+      table{font-size:13px}
+      table th, table td{padding:10px 12px;font-size:12px}
+    }
+    
+    /* Mobile Landscape (max-width: 768px) */
+    @media(max-width:768px){
+      main{padding:12px}
+      .grid4{grid-template-columns:1fr;gap:10px}
+      .grid2{grid-template-columns:1fr}
+      .dashboard-grid{grid-template-columns:1fr;gap:14px}
+      .dashboard-card-header{font-size:1rem;padding:12px 16px}
+      .dashboard-card-content{padding:12px 16px;font-size:0.95rem}
+      .row{flex-direction:column;align-items:flex-start;padding:10px 12px}
+      .row .left{flex-direction:column;align-items:flex-start;width:100%}
+      .appt-card{flex-direction:column;align-items:flex-start;gap:10px}
+      .appt-left{flex-direction:column;align-items:flex-start;width:100%}
+      .brand{font-size:16px}
+      .brand i{font-size:18px}
+      header.top{flex-wrap:wrap;gap:8px}
+      .hdr-actions{order:3;width:100%;justify-content:flex-end}
+      .page-title{font-size:16px;margin-bottom:10px}
+      .kpi{font-size:24px}
+      .card .head{flex-wrap:wrap;gap:8px}
+      table{display:block;overflow-x:auto;white-space:nowrap}
+      .pill, .chip, .badge, .tag{font-size:11px;padding:3px 8px}
+      .toolbar{flex-wrap:wrap;gap:10px}
+      .filters{flex-wrap:wrap}
+      .cal-grid{grid-template-columns:repeat(7, 1fr);gap:4px}
+      .cal-cell{min-height:60px;font-size:12px}
+      .cal-day{padding:6px;font-size:11px}
+    }
+    
+    /* Mobile Portrait (max-width: 480px) */
+    @media(max-width:480px){
+      body{font-size:14px}
+      main{padding:10px}
+      .grid4{grid-template-columns:1fr;gap:8px}
+      .dashboard-card-header{font-size:0.9rem;padding:10px 14px;flex-wrap:wrap}
+      .dashboard-card-header i{font-size:1.2rem;padding:6px 10px}
+      .dashboard-card-content{padding:10px 14px;font-size:0.9rem}
+      .card{border-radius:10px}
+      .card .head{padding:8px 10px;font-size:13px;flex-direction:column;align-items:flex-start;gap:8px}
+      .card .body{padding:10px}
+      header.top{padding:8px 12px}
+      .brand{font-size:14px;gap:6px}
+      .avatar{width:32px;height:32px;font-size:14px}
+      .user-btn{padding:4px 8px;font-size:13px}
+      .dropdown{width:180px;right:12px;top:56px}
+      .dd-item{padding:8px;font-size:13px}
+      .page-title{font-size:15px;margin-bottom:8px}
+      .kpi{font-size:20px}
+      .kpi-icon{width:32px;height:32px;font-size:16px}
+      .kpi-meta{font-size:11px}
+      .row{padding:8px 10px}
+      .pill, .chip, .badge, .tag{font-size:10px;padding:2px 6px}
+      .btn-grad{padding:6px 10px;font-size:12px}
+      table th, table td{padding:8px 10px;font-size:11px}
+      .icon-btn{width:32px;height:32px;font-size:14px}
+      .dot{width:28px;height:28px;font-size:13px}
+      .seg button{padding:5px 8px;font-size:12px}
+      .toolbar{flex-direction:column;align-items:stretch}
+      .toolbar > *{width:100%}
+      .seg{justify-content:center}
+      input[type="text"], input[type="date"], input[type="email"], input[type="password"], select, textarea{
+        font-size:14px;padding:8px 10px;border-radius:6px
+      }
+      .cal-grid{grid-template-columns:repeat(7, 1fr);gap:2px}
+      .cal-cell{min-height:50px;font-size:10px;padding:4px}
+      .cal-day{padding:4px;font-size:10px}
+      .latest-appt-card{padding:16px 20px;border-radius:14px}
+      .latest-appt-label{font-size:1rem}
+      .latest-appt-detail{font-size:0.9rem}
+      .latest-appt-status{font-size:0.85rem;padding:3px 12px}
+    }
+    
+    /* Extra Small Mobile (max-width: 360px) */
+    @media(max-width:360px){
+      main{padding:8px}
+      .grid4{gap:6px}
+      .dashboard-card-header{font-size:0.85rem;padding:8px 12px}
+      .dashboard-card-content{padding:8px 12px;font-size:0.85rem}
+      .card .head{padding:6px 8px;font-size:12px}
+      .card .body{padding:8px}
+      header.top{padding:6px 10px;flex-direction:column;align-items:stretch}
+      .brand{font-size:13px}
+      .hdr-actions{width:100%;justify-content:space-between;order:2}
+      .avatar{width:28px;height:28px;font-size:12px}
+      .page-title{font-size:14px}
+      .kpi{font-size:18px}
+      .kpi-icon{width:28px;height:28px;font-size:14px;padding:6px}
+      .row{padding:6px 8px;gap:6px}
+      .pill, .chip, .badge, .tag{font-size:9px;padding:2px 5px}
+      .btn-grad{padding:5px 8px;font-size:11px}
+      table th, table td{padding:6px 8px;font-size:10px}
+      .dropdown{width:160px}
+      .cal-grid{gap:1px}
+      .cal-cell{min-height:45px;font-size:9px;padding:2px}
+      .cal-day{font-size:9px}
+    }
+    
+    /* Utility Classes for Responsive Visibility */
+    .mobile-only{display:none !important}
+    .desktop-only{display:block !important}
+    
+    @media(max-width:768px){
+      .mobile-only{display:block !important}
+      .desktop-only{display:none !important}
+      img.mobile-only{display:inline-block !important}
+      img.desktop-only{display:none !important}
+    }
+    
+    /* Responsive Container */
+    .container{max-width:100%;padding-left:16px;padding-right:16px;margin:0 auto}
+    @media(min-width:640px){.container{max-width:640px}}
+    @media(min-width:768px){.container{max-width:768px}}
+    @media(min-width:1024px){.container{max-width:1024px}}
+    @media(min-width:1280px){.container{max-width:1280px}}
+    
+    /* Prevent horizontal scroll on mobile */
+    html, body{overflow-x:hidden;max-width:100%}
+    
+    /* Smooth scrolling for better UX */
+    html{scroll-behavior:smooth}
+    
+    /* Better touch targets on mobile */
+    @media(max-width:768px){
+      a, button, input, select, textarea{
+        -webkit-tap-highlight-color:rgba(0,0,0,0.1);
+      }
+    }
+    
+    /* Responsive Tables */
+    @media(max-width:768px){
+      .table-responsive{overflow-x:auto;-webkit-overflow-scrolling:touch}
+      .table-responsive table{min-width:600px}
+    }
+    
+    /* Touch-friendly buttons on mobile */
+    @media(max-width:768px){
+      button, .btn-grad, .pill, .chip, .icon-btn, a.pill{
+        min-height:44px;
+        min-width:44px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+      }
+      
+      /* Mobile-friendly modals */
+      .overlay{padding:12px}
+      .overlay-content{max-width:95vw !important;max-height:90vh;overflow-y:auto;margin:auto}
+      
+      /* Mobile-friendly dropdowns */
+      .dropdown{
+        position:fixed !important;
+        left:50% !important;
+        top:50% !important;
+        transform:translate(-50%, -50%) !important;
+        width:90vw;
+        max-width:320px;
+        max-height:80vh;
+        overflow-y:auto;
+        z-index:2000;
+      }
+      
+      #notifDropdown{
+        position:fixed !important;
+        left:50% !important;
+        top:50% !important;
+        transform:translate(-50%, -50%) !important;
+        width:90vw;
+        max-width:360px;
+        max-height:70vh;
+      }
+      
+      /* Better form inputs on mobile */
+      input[type="text"], 
+      input[type="email"], 
+      input[type="password"], 
+      input[type="tel"], 
+      input[type="number"], 
+      input[type="date"], 
+      input[type="time"], 
+      select, 
+      textarea{
+        font-size:16px !important; /* Prevent zoom on iOS */
+        -webkit-appearance:none;
+        appearance:none;
+      }
+      
+      /* Fix for sticky elements on mobile */
+      .sticky{position:sticky;top:56px;z-index:100}
+      
+      /* Improve list spacing on mobile */
+      .list{gap:8px}
+      .notif-list{gap:8px}
+      
+      /* Better card spacing */
+      .card{margin-bottom:12px}
+      
+      /* Responsive grid adjustments */
+      .grid2{gap:10px}
+    }
+    
+    /* Extra mobile optimizations for very small screens */
+    @media(max-width:480px){
+      .overlay-content{max-width:98vw !important;border-radius:12px}
+      
+      /* Stack action buttons vertically on very small screens */
+      .row > div:last-child{
+        width:100%;
+        flex-direction:column;
+        gap:6px;
+      }
+      
+      .row > div:last-child > *{width:100%}
+      
+      /* Better spacing for cramped screens */
+      body{font-size:13px}
+      
+      /* Adjust notification dropdown for small screens */
+      #notifDropdown{max-width:95vw}
+    }
+    btn-grad, .pill, .chip, .menu-btn, .icon-btn, .user-btn, .dd-item, button, a {
+      cursor: pointer;
+    }
+    /* Latest Appointment Card Animation */
+    .latest-appt-card {
+      background: linear-gradient(135deg, #770b0bff 0%, #9b1414ff 60%, #213A57 100%);
+      color: #fff;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(20,145,155,.18);
+      padding: 22px 28px;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.3s, transform 0.3s;
+      animation: fadeInAppt 0.8s cubic-bezier(.4,0,.2,1);
+    }
+    .latest-appt-card:hover {
+      box-shadow: 0 16px 48px rgba(20,145,155,.28);
+      transform: translateY(-2px) scale(1.03);
+    }
+    .latest-appt-label {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(33,58,87,.18);
+    }
+    .latest-appt-detail {
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #e0f2fe;
+      transition: color 0.2s;
+    }
+    .latest-appt-status {
+      display: inline-block;
+      background: #fff;
+      color: #0B6477;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 4px 16px;
+      margin-top: 8px;
+      box-shadow: 0 2px 8px rgba(33,58,87,.10);
+      font-size: 1rem;
+      letter-spacing: 1px;
+      transition: background 0.2s, color 0.2s;
+    }
+    @keyframes fadeInAppt {
+      0% { opacity: 0; transform: translateY(30px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 32px;
+      margin-top: 40px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .dashboard-card {
+      background: #f3f4f6;
+      border-radius: 0;
+      box-shadow: 0 8px 32px rgba(33,58,87,.10);
+      padding: 0;
+      overflow: hidden;
+      border: none;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .dashboard-card-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #d1d5db;
+      padding: 18px 24px 12px 24px;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #3b2a5a;
+      letter-spacing: 1px;
+    }
+    .dashboard-card-header i {
+      font-size: 1.7rem;
+      background: #dc2626;
+      color: #fff;
+      border-radius: 12px;
+      padding: 8px 12px;
+      margin-right: 4px;
+      box-shadow: 0 2px 8px rgba(33,58,87,.10);
+    }
+    .dashboard-card-content {
+      flex: 1;
+      background: #fff;
+      padding: 18px 24px;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      border-top: 4px solid #222;
+      font-size: 1.08rem;
+      color: #213A57;
+    }

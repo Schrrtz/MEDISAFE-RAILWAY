@@ -1,0 +1,130 @@
+================================================================================
+                SUPABASE STORAGE SETUP FOR PROFILE PHOTOS
+================================================================================
+
+Your Django app is now configured to store profile photos in Supabase Storage!
+
+STEP 1: CREATE STORAGE BUCKET IN SUPABASE
+================================================================================
+
+1. Go to: https://supabase.com/dashboard/project/wqoluwmdzljpvzimjiyr
+
+2. Click on "Storage" in the left sidebar
+
+3. Click "New Bucket" or "Create a new bucket"
+
+4. Configure the bucket:
+   - Name: profile-photos
+   - Public bucket: YES (check this box)
+   - File size limit: 5 MB (recommended)
+   - Allowed MIME types: image/jpeg, image/png, image/jpg, image/gif
+
+5. Click "Create Bucket"
+
+6. Set Storage Policies (Security):
+   - Click on "Policies" for the profile-photos bucket
+   - Add policy for INSERT (upload):
+     * Policy name: "Allow authenticated uploads"
+     * Policy definition: `(bucket_id = 'profile-photos')`
+     * Check: INSERT
+   
+   - Add policy for SELECT (view):
+     * Policy name: "Allow public access"
+     * Policy definition: `(bucket_id = 'profile-photos')`
+     * Check: SELECT
+
+STEP 2: VERIFY CONFIGURATION
+================================================================================
+
+Your settings.py already has:
+
+SUPABASE_URL = 'https://wqoluwmdzljpvzimjiyr.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+SUPABASE_STORAGE_BUCKET = 'profile-photos'
+
+STEP 3: TEST THE UPLOAD
+================================================================================
+
+1. Restart your Django server (if not already running):
+   cd pbl
+   py manage.py runserver 0.0.0.0:8000
+
+2. Go to: http://localhost:8000
+
+3. Click "Sign Up"
+
+4. Fill in the form and upload a photo
+
+5. Submit the form
+
+6. Go to Supabase Dashboard > Storage > profile-photos
+   - You should see your uploaded photo!
+
+7. Check your user profile page
+   - The photo should display from Supabase Storage URL
+
+STEP 4: PHOTO URL FORMAT
+================================================================================
+
+Photos are now stored with URLs like:
+https://wqoluwmdzljpvzimjiyr.supabase.co/storage/v1/object/public/profile-photos/[uuid].jpg
+
+Benefits:
+✓ Photos stored in cloud (not on local server)
+✓ Accessible from anywhere
+✓ Automatic CDN delivery
+✓ No need to serve media files from Django
+✓ Works with Android app without extra configuration
+
+TROUBLESHOOTING
+================================================================================
+
+Issue: "Failed to upload photo to Supabase"
+Solution: 
+- Check Supabase bucket exists and is named "profile-photos"
+- Check bucket is set to PUBLIC
+- Check storage policies allow INSERT and SELECT
+- Check your SUPABASE_KEY in settings.py is correct
+
+Issue: Photo doesn't display
+Solution:
+- Check browser console for 404 errors
+- Verify the bucket is PUBLIC
+- Check SELECT policy is enabled
+- Try accessing the photo URL directly in browser
+
+Issue: Permission denied
+Solution:
+- Go to Storage > Policies
+- Make sure policies allow public access
+- Bucket must be marked as PUBLIC
+
+MIGRATION NOTES
+================================================================================
+
+Database Change:
+- photo_url field changed from ImageField to URLField
+- Migration applied: 0016_alter_userprofile_photo_url
+- Old photos in local media/ folder will NOT work anymore
+- Users need to re-upload photos after this change
+
+To clear old data (optional):
+UPDATE user_profiles SET photo_url = NULL WHERE photo_url LIKE 'profile_photos/%';
+
+NEXT STEPS FOR PRODUCTION
+================================================================================
+
+1. Set environment variables:
+   export SUPABASE_URL="https://wqoluwmdzljpvzimjiyr.supabase.co"
+   export SUPABASE_KEY="your-key-here"
+   export SUPABASE_STORAGE_BUCKET="profile-photos"
+
+2. Add file size validation in frontend
+
+3. Add image optimization before upload
+
+4. Consider adding file type validation
+
+5. Add error handling for upload failures
+
+================================================================================

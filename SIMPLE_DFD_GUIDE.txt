@@ -1,0 +1,183 @@
+================================================================================
+                    SIMPLE DFD GUIDE FOR MEDISAFE
+                    Data Flow Diagram Elements
+================================================================================
+
+EXTERNAL ENTITIES (People/Systems that interact with your system)
+================================================================================
+□ Patient       - Users seeking medical services
+□ Doctor        - Medical professionals providing care
+□ Admin         - System administrators managing the platform
+
+
+PROCESSES (Main functions of your system)
+================================================================================
+1.0  User Authentication
+     - Login, Signup, Logout
+     
+2.0  Profile Management
+     - View/Edit user profile and personal information
+     
+3.0  Appointment Booking
+     - Book, view, cancel appointments with doctors
+     
+4.0  Live Consultation
+     - Real-time video/text consultation with doctors
+     
+5.0  Prescription Management
+     - Doctors create prescriptions, patients view them
+     
+6.0  Lab Results
+     - Upload, view, and manage lab test results
+     
+7.0  Notifications
+     - Send/receive system notifications and alerts
+     
+8.0  Admin Management
+     - Manage users, doctors, patients, and system settings
+
+
+DATA STORES (Database Tables)
+================================================================================
+D1  users              - User accounts (username, password, email, role)
+D2  user_profiles      - Profile details (name, photo, address, contact)
+D3  doctors            - Doctor information (specialization, license)
+D4  patients           - Patient medical history
+D5  appointments       - Scheduled appointments
+D6  prescriptions      - Medical prescriptions
+D7  lab_results        - Laboratory test results
+D8  notifications      - System notifications
+
+
+MAJOR DATA FLOWS (Connections between elements)
+================================================================================
+
+FROM PATIENT:
+Patient → [1.0 Authentication] → D1 users
+Patient → [2.0 Profile Mgmt] → D2 user_profiles
+Patient → [3.0 Appointment Booking] → D5 appointments
+Patient → [4.0 Live Consultation] → D3 doctors
+Patient → [6.0 Lab Results] → D7 lab_results
+
+FROM DOCTOR:
+Doctor → [1.0 Authentication] → D1 users
+Doctor → [2.0 Profile Mgmt] → D2 user_profiles
+Doctor → [3.0 View Appointments] ← D5 appointments
+Doctor → [4.0 Live Consultation] → Patient
+Doctor → [5.0 Prescriptions] → D6 prescriptions
+
+FROM ADMIN:
+Admin → [1.0 Authentication] → D1 users
+Admin → [8.0 Admin Management] → D1, D2, D3, D4
+
+INTERNAL FLOWS:
+[3.0 Booking] → [7.0 Notifications] → Patient/Doctor
+[5.0 Prescriptions] → [7.0 Notifications] → Patient
+[6.0 Lab Results] → [7.0 Notifications] → Patient
+
+
+SIMPLIFIED DFD DRAWING GUIDE
+================================================================================
+
+LEVEL 0 (Context Diagram) - Highest level overview:
+
+    ┌─────────┐
+    │ Patient │──┐
+    └─────────┘  │
+                 │         ┌────────────────┐
+    ┌─────────┐  ├────────►│                │
+    │ Doctor  │──┤         │  MEDISAFE      │
+    └─────────┘  │         │  SYSTEM        │
+                 │         │                │
+    ┌─────────┐  │         └────────────────┘
+    │  Admin  │──┘
+    └─────────┘
+
+
+LEVEL 1 (Main Processes) - Show main functions:
+
+  Patient                                           Doctor
+    │                                                 │
+    ├──credentials──► 1.0 Authentication ◄──credentials──┤
+    │                      │                          │
+    │                      ▼                          │
+    │                  D1: users                      │
+    │                                                 │
+    ├──appointment──► 3.0 Book Appt ──notification───┤
+    │                      │                          │
+    │                      ▼                          │
+    │                D5: appointments                 │
+    │                      │                          │
+    │                      ▼                          │
+    │    ◄────notification─┴───► 7.0 Notifications   │
+    │                                                 │
+    └────medical data───► 4.0 Consultation ◄─diagnosis┘
+                               │
+                               ▼s
+                         D6: prescriptions
+
+
+LEVEL 2 (Detailed Process) - Break down one process:
+
+For "3.0 Appointment Booking":
+
+  Patient
+    │
+    ├─ select doctor ──► 3.1 Choose Doctor ◄─── D3: doctors
+    │                            │
+    │                            ▼
+    ├─ select date/time ──► 3.2 Check Availability ◄─── D5: appointments
+    │                            │
+    │                            ▼
+    └─ confirm ──► 3.3 Create Appointment ───► D5: appointments
+                            │
+                            ▼
+                   3.4 Send Notification ───► Patient & Doctor
+
+
+DFD SYMBOLS
+================================================================================
+
+External Entity:    □  Patient
+                    □  Doctor
+
+Process:           (1.0)  Login
+                   (2.0)  Book Appointment
+
+Data Store:        ═══ D1: users ═══
+                   ═══ D2: profiles ═══
+
+Data Flow:         ────────►  (arrow with label)
+                   username, password
+
+
+WHAT TO INCLUDE IN YOUR DFD
+================================================================================
+
+✓ 3 External Entities (Patient, Doctor, Admin)
+✓ 8 Main Processes (Authentication, Profile, Booking, Consultation, Prescription, Lab Results, Notifications, Admin)
+✓ 8 Data Stores (users, profiles, doctors, patients, appointments, prescriptions, lab_results, notifications)
+✓ Key data flows showing how data moves between entities, processes, and stores
+
+IMPORTANT RULES
+✓ Data must flow between entities and processes (not directly to stores)
+✓ Processes transform/use data
+✓ All data flows must be labeled
+✓ Keep Level 0 simple (1 process)
+✓ Level 1 shows main functions (5-9 processes)
+✓ Level 2 breaks down specific processes
+
+
+QUICK DRAWING CHECKLIST
+================================================================================
+1. Draw external entities on the outside (Patient, Doctor, Admin)
+2. Draw main processes in the middle (numbered 1.0, 2.0, etc.)
+3. Draw data stores at the bottom (D1, D2, D3, etc.)
+4. Connect entities to processes with arrows (label the data)
+5. Connect processes to data stores with arrows
+6. Add notification flows between processes
+7. Label EVERYTHING clearly
+
+Done! Your DFD shows how data flows through MediSafe.
+
+================================================================================
