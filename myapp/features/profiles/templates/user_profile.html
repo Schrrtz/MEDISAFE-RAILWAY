@@ -1493,53 +1493,26 @@
         photoInput.id = 'photoFileInput';
         photoInput.accept = 'image/*';
         photoInput.style.display = 'none';
-        photoInput.onchange = async function(e) {
+        photoInput.onchange = function(e) {
             if (!e.target.files || !e.target.files[0]) return;
             
             const file = e.target.files[0];
-            const formData = new FormData();
-            formData.append('photo', file);
             
-            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                             document.cookie.match(/csrftoken=([^;]+)/)?.[1];
-
-            try {
-                const response = await fetch('/api/update-profile-photo/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: formData,
-                    credentials: 'same-origin'
-                });
-
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type') || '';
-                let data;
-                
-                if (contentType.includes('application/json')) {
-                    data = await response.json();
-                } else {
-                    const text = await response.text();
-                    throw new Error(`Server returned an error (${response.status}). Please try again.`);
+            // Preview the selected photo
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const avatarImg = document.querySelector('.avatar img');
+                if (avatarImg) {
+                    avatarImg.src = event.target.result;
                 }
-                
-                if (data.success) {
-                    // Update avatar image
-                    const avatarImg = document.querySelector('.avatar img');
-                    if (avatarImg) {
-                        avatarImg.src = data.photo_url + '?t=' + Date.now();
-                    } else {
-                        // Reload page to show new photo
-                        window.location.reload();
-                    }
-                    alert('Profile photo updated successfully!');
-                } else {
-                    throw new Error(data.error || 'Failed to update photo');
-                }
-            } catch (error) {
-                console.error('Error uploading photo:', error);
-                alert('Error: ' + (error.message || 'Failed to update photo. Please try again.'));
+            };
+            reader.readAsDataURL(file);
+            
+            // Show a message that photo will be saved when clicking Save Changes
+            const uploadBtn = document.querySelector('.photo-upload-btn');
+            if (uploadBtn) {
+                uploadBtn.innerHTML = '<i class="fas fa-check"></i> Photo Selected';
+                uploadBtn.style.background = 'rgba(34, 197, 94, 0.8)';
             }
         };
         document.body.appendChild(photoInput);
