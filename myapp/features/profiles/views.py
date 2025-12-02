@@ -9,6 +9,7 @@ import os
 from django.views.decorators.csrf import csrf_exempt
 import json
 import uuid
+import base64
 from supabase import create_client, Client
 
 from ...models import (
@@ -233,37 +234,24 @@ def update_profile(request):
         user = get_object_or_404(User, user_id=user_id)
         user_profile = get_object_or_404(UserProfile, user=user)
         
-        # Handle profile photo upload if provided
+        # Handle profile photo upload - store as base64 in database
         if 'photo' in request.FILES:
             uploaded = request.FILES.get('photo')
             if uploaded:
                 # Validate file type
                 allowed_types = ['image/jpeg', 'image/png', 'image/gif']
                 if uploaded.content_type in allowed_types:
-                    filename = f"{user.user_id}_{uploaded.name}"
-                    relative_path = os.path.join('profile_photos', filename)
-                    full_path = os.path.join(settings.MEDIA_ROOT, relative_path)
-                    os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                    
-                    # Delete old photo if exists
-                    if user_profile.photo_url:
-                        old_path = user_profile.photo_url
-                        if isinstance(old_path, str) and old_path.startswith('/media/'):
-                            old_full_path = os.path.join(settings.BASE_DIR, old_path.lstrip('/'))
-                            if os.path.exists(old_full_path):
-                                try:
-                                    os.remove(old_full_path)
-                                except Exception:
-                                    pass
-                    
-                    # Save new file
-                    with open(full_path, 'wb+') as destination:
-                        for chunk in uploaded.chunks():
-                            destination.write(chunk)
-                    
-                    # Fix for f-string: can't use backslash in expression
-                    normalized_path = relative_path.replace('\\', '/')
-                    user_profile.photo_url = f"/media/{normalized_path}"
+                    try:
+                        file_content = uploaded.read()
+                        
+                        # Encode to base64
+                        file_base64 = base64.b64encode(file_content).decode('utf-8')
+                        
+                        # Create data URL
+                        photo_url = f"data:{uploaded.content_type};base64,{file_base64}"
+                        user_profile.photo_url = photo_url
+                    except Exception as upload_err:
+                        return JsonResponse({"success": False, "message": f"Photo upload failed: {str(upload_err)}"}, status=400)
         
         # Update UserProfile fields
         userprofile_fields = [
@@ -306,7 +294,12 @@ def update_profile(request):
         
         return JsonResponse({
             "success": True,
-            "message": "Profile updated successfully"
+            "message": "Profile updated successfully",
+            "profile": {
+                "photo_url": user_profile.photo_url,
+                "first_name": user_profile.first_name,
+                "last_name": user_profile.last_name,
+            }
         })
         
     except Exception as e:

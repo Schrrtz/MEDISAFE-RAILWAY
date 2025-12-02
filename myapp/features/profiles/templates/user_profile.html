@@ -1470,6 +1470,14 @@
             }
 
             if (data.success) {
+                // Update avatar image if photo was uploaded
+                if (data.profile && data.profile.photo_url) {
+                    const avatarImg = document.querySelector('.avatar img');
+                    if (avatarImg) {
+                        avatarImg.src = data.profile.photo_url;
+                    }
+                }
+                
                 alert('Profile updated successfully!');
                 window.location.reload();
             } else {
