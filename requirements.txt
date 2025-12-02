@@ -82,15 +82,5 @@ gunicorn==23.0.0
 # Static File Serving
 whitenoise==6.8.2
 
-# Optional UI Framework (not needed for production)
-Flask==3.1.0
-PySimpleGUI==5.0.10
-
-# Enum Support
-StrEnum==0.4.15
-
-# Web Sockets
-websockets==15.0.1
-
 # Database URL Parser
 dj-database-url==2.3.0
