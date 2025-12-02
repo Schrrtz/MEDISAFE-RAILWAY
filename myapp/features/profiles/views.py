@@ -261,7 +261,9 @@ def update_profile(request):
                         for chunk in uploaded.chunks():
                             destination.write(chunk)
                     
-                    user_profile.photo_url = f"/media/{relative_path.replace('\\', '/')}"
+                    # Fix for f-string: can't use backslash in expression
+                    normalized_path = relative_path.replace('\\', '/')
+                    user_profile.photo_url = f"/media/{normalized_path}"
         
         # Update UserProfile fields
         userprofile_fields = [
