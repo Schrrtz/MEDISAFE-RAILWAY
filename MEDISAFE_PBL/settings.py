@@ -192,12 +192,10 @@ STATIC_URL = 'static/'
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Include media folder in static files for Railway deployment
-# This allows logos, homepage pictures, and lab pictures to be served via WhiteNoise
+# Static files directories - media files are now inside myapp/static
 STATICFILES_DIRS = [
     BASE_DIR / 'myapp' / 'static',
     BASE_DIR / 'myapp' / 'features' / 'doctors',
-    BASE_DIR / 'media',  # Serve media files as static in production
 ]
 
 # WhiteNoise configuration for production static file serving
