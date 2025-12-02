@@ -8,5 +8,6 @@ urlpatterns = [
     path("", include("myapp.urls"))
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files in both development and production
+# In production (Railway), WhiteNoise will serve these from staticfiles
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

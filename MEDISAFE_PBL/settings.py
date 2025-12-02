@@ -191,22 +191,23 @@ STATIC_URL = 'static/'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Include media folder in static files for Railway deployment
+# This allows logos, homepage pictures, and lab pictures to be served via WhiteNoise
 STATICFILES_DIRS = [
     BASE_DIR / 'myapp' / 'static',
     BASE_DIR / 'myapp' / 'features' / 'doctors',
+    BASE_DIR / 'media',  # Serve media files as static in production
 ]
 
 # WhiteNoise configuration for production static file serving
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (User uploaded files)
+# Media files configuration
+# In production (Railway), media files are served as static files via WhiteNoise
+# In development, they use the standard MEDIA_URL
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-# Copy media files to static during collectstatic for Railway
-import shutil
-if os.path.exists(BASE_DIR / 'media'):
-    STATICFILES_DIRS.append(BASE_DIR / 'media')
 # Supabase Storage Configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://wqoluwmdzljpvzimjiyr.supabase.co')
 # Use service_role key for backend operations (has full access)
