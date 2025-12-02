@@ -620,12 +620,6 @@
               </div>
             </div>
 
-
-            {% if lab_results_caption %}
-            <div class="caption-box">
-              <i class="fas fa-info-circle mr-2"></i>{{ lab_results_caption }}
-            </div>
-            {% endif %}
             <div class="mt-6 p-6 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
               <h3 class="text-lg font-bold text-blue-700 mb-3">Analysis</h3>
               <p class="text-sm text-gray-700 leading-relaxed" id="lab-results-meaning">
@@ -749,16 +743,11 @@
               </div>
             </div>
 
-            {% if fields_caption %}
-            <div class="caption-box">
-              <i class="fas fa-info-circle mr-2"></i>{{ fields_caption }}
-            </div>
-            {% endif %}
             <div class="mt-6 p-6 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
               <h3 class="text-lg font-bold text-blue-700 mb-3">Analysis</h3>
               <p class="text-sm text-gray-700 leading-relaxed" id="fields-meaning">
                 {% if fields_stats.total_specializations > 0 %}
-                  Your facility has <strong>{{ fields_stats.total_specializations }}</strong> specializations available, with the most popular specialization receiving <strong>{{ fields_stats.max }}</strong> bookings. This reveals specializations with varying levels of patient demand and helps identify which medical fields are most sought after by your patients. {% if fields_caption %}{{ fields_caption }}{% endif %}
+                  Your facility has <strong>{{ fields_stats.total_specializations }}</strong> specializations available, with the most popular specialization receiving <strong>{{ fields_stats.max }}</strong> bookings. This reveals specializations with varying levels of patient demand and helps identify which medical fields are most sought after by your patients.
                 {% else %}
                   No specialization booking data available yet. Once patients start booking specialists, their distribution patterns will be displayed here.
                 {% endif %}
