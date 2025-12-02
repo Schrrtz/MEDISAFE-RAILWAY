@@ -194,13 +194,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'myapp' / 'static',
     BASE_DIR / 'myapp' / 'features' / 'doctors',
+    BASE_DIR / 'media',  # Add media folder to static files for Railway deployment
 ]
 
 # WhiteNoise configuration for production static file serving
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (User uploaded files)
-MEDIA_URL = '/media/'
+# Media files (User uploaded files) - served as static in production
+MEDIA_URL = '/static/'
 MEDIA_ROOT = BASE_DIR / 'media'
 # Supabase Storage Configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://wqoluwmdzljpvzimjiyr.supabase.co')

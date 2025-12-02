@@ -51,18 +51,18 @@ def mod_users(request):
                         username=username,
                         email=email,
                         role=role,
-                        is_active=True,
-                        first_name=first_name,
-                        last_name=last_name
+                        is_active=True
                     )
                     new_user.set_password(password)
                     new_user.save()
 
                     UserProfile.objects.create(
                         user=new_user,
+                        first_name=first_name,
+                        last_name=last_name,
+                        middle_name=middle_name,
                         sex=sex,
                         birthday=birthday if birthday else None,
-                        middle_name=middle_name,
                         address=address,
                         contact_number=contact_number,
                         civil_status=civil_status
