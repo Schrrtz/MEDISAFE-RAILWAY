@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    doctor_panel, update_doctor_profile, search_patients, patient_lab_results, 
+    doctor_panel, update_doctor_profile, doctor_change_password, search_patients, patient_lab_results, 
     download_lab_result, live_appointment, start_live_consultation, 
     restart_live_consultation, update_consultation_data, complete_consultation, 
     create_prescription, sign_prescription, generate_prescription_pdf, upload_prescription_file,
@@ -11,6 +11,7 @@ from .views import (
 urlpatterns = [
 	path('doctor/panel/', doctor_panel, name='doctor_panel'),
     path('doctor/api/update-profile/', update_doctor_profile, name='doctor_update_profile'),
+    path('doctor/api/change-password/', doctor_change_password, name='doctor_change_password'),
     path('doctors/search-patients/', search_patients, name='search_patients'),
     path('doctors/patient-lab-results/<int:patient_id>/', patient_lab_results, name='patient_lab_results'),
     path('doctors/download-lab-result/<int:result_id>/', download_lab_result, name='doctor_download_lab_result'),

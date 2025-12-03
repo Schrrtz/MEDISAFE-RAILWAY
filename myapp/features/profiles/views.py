@@ -308,6 +308,47 @@ def update_profile(request):
             "message": f"An error occurred: {str(e)}"
         })
 
+def patient_change_password(request):
+    """Change password for patient users"""
+    if request.method != 'POST':
+        return JsonResponse({"success": False, "error": "Method not allowed"}, status=405)
+    
+    user_id = request.session.get("user_id") or request.session.get("user")
+    if not user_id:
+        return JsonResponse({"success": False, "error": "Please login first"}, status=401)
+    
+    try:
+        user = get_object_or_404(User, user_id=user_id)
+        
+        # Ensure only patients can use this endpoint
+        if getattr(user, 'role', None) != 'patient':
+            return JsonResponse({"success": False, "error": "Unauthorized"}, status=403)
+        
+        data = json.loads(request.body)
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        # Validation
+        if not new_password or not confirm_password:
+            return JsonResponse({"success": False, "error": "Both password fields are required"}, status=400)
+        
+        if len(new_password) < 8:
+            return JsonResponse({"success": False, "error": "Password must be at least 8 characters long"}, status=400)
+        
+        if new_password != confirm_password:
+            return JsonResponse({"success": False, "error": "Passwords do not match"}, status=400)
+        
+        # Update password
+        user.set_password(new_password)
+        user.save()
+        
+        return JsonResponse({"success": True, "message": "Password updated successfully"})
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON data"}, status=400)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def update_profile_photo_legacy(request):
