@@ -180,6 +180,19 @@ def update_doctor_profile(request):
                 setattr(profile, field, value)
 
         profile.save()
+        
+        # Handle password change if provided
+        password = request.POST.get('password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+        
+        if password or confirm_password:
+            if len(password) < 6:
+                return JsonResponse({"success": False, "message": "Password must be at least 6 characters long"}, status=400)
+            if password != confirm_password:
+                return JsonResponse({"success": False, "message": "Passwords do not match"}, status=400)
+            
+            user.set_password(password)
+            user.save()
 
         return JsonResponse({
             "success": True,
@@ -197,43 +210,6 @@ def update_doctor_profile(request):
         })
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
-
-
-@login_required(login_url='homepage2')
-def doctor_change_password(request):
-    """Change password for doctor users"""
-    if request.method != 'POST':
-        return JsonResponse({"success": False, "error": "Method not allowed"}, status=405)
-    
-    user = request.user
-    # Ensure only doctors can use this endpoint
-    if getattr(user, 'role', None) != 'doctor':
-        return JsonResponse({"success": False, "error": "Unauthorized"}, status=403)
-    
-    try:
-        data = json.loads(request.body)
-        new_password = data.get('new_password')
-        confirm_password = data.get('confirm_password')
-        
-        # Validation
-        if not new_password or not confirm_password:
-            return JsonResponse({"success": False, "error": "Both password fields are required"}, status=400)
-        
-        if len(new_password) < 8:
-            return JsonResponse({"success": False, "error": "Password must be at least 8 characters long"}, status=400)
-        
-        if new_password != confirm_password:
-            return JsonResponse({"success": False, "error": "Passwords do not match"}, status=400)
-        
-        # Update password
-        user.set_password(new_password)
-        user.save()
-        
-        return JsonResponse({"success": True, "message": "Password updated successfully"})
-    except json.JSONDecodeError:
-        return JsonResponse({"success": False, "error": "Invalid JSON data"}, status=400)
-    except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 @login_required(login_url='homepage2')

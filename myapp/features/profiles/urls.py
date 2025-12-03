@@ -6,7 +6,6 @@ urlpatterns = [
     path('api/update-profile-photo/', views.update_profile_photo, name='update_profile_photo'),
     path('api/update-cover-photo/', views.update_cover_photo, name='update_cover_photo'),
     path('api/update-profile/', views.update_profile, name='update_profile'),
-    path('api/change-password/', views.patient_change_password, name='patient_change_password'),
     path('api/update-profile-photo-legacy/', views.update_profile_photo_legacy, name='update_profile_photo_legacy'),
     path('api/send-message-to-admin/', views.send_message_to_admin, name='send_message_to_admin'),
 ]

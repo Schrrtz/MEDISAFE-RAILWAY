@@ -852,6 +852,23 @@
                     </div>
                 </div>
             </div>
+
+            <div class="info-row" id="password-row">
+                <div style="width: 100%;">
+                    <div class="info-label">Password</div>
+                    <div class="info-value">••••••••</div>
+                </div>
+            </div>
+
+            <div class="info-row" id="confirm-password-row" style="display: none;">
+                <div style="width: 100%;">
+                    <div class="info-label">Confirm Password</div>
+                    <div class="info-value"></div>
+                    <div id="patient-password-match-error" style="display:none;color:#dc2626;font-size:12px;margin-top:4px">
+                        <i class="fas fa-exclamation-circle"></i> Passwords do not match
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Right: Contact Information -->
@@ -1281,6 +1298,10 @@
             }
         }
         
+        // Show confirm password row in edit mode
+        const confirmPasswordRow = document.getElementById('confirm-password-row');
+        if (confirmPasswordRow) confirmPasswordRow.style.display = '';
+        
         // Convert all other info-value elements to input fields
         document.querySelectorAll('.info-value').forEach(valueEl => {
             const labelEl = valueEl.previousElementSibling;
@@ -1289,11 +1310,25 @@
             const label = labelEl.textContent.trim();
             if (label === 'Full Name') return; // Skip, already handled
             
-            const currentValue = valueEl.textContent.trim().replace(/\s*\(.*?\)\s*/g, '').replace('Not provided', '').trim();
+            const currentValue = valueEl.textContent.trim().replace(/\s*\(.*?\)\s*/g, '').replace('Not provided', '').replace('••••••••', '').trim();
             
             // Create input based on field type
             let input;
             const fieldName = getFieldName(label);
+            
+            // Special handling for password fields
+            if (fieldName === 'password' || fieldName === 'confirm_password') {
+                input = document.createElement('input');
+                input.type = 'password';
+                input.className = 'edit-input';
+                input.minLength = 6;
+                input.placeholder = fieldName === 'password' ? 'Leave blank to keep current (min. 6 characters)' : 'Confirm new password';
+                input.value = '';
+                input.setAttribute('data-field', fieldName);
+                valueEl.style.display = 'none';
+                valueEl.parentElement.appendChild(input);
+                return;
+            }
             
             if (fieldName === 'sex') {
                 input = document.createElement('select');
@@ -1362,32 +1397,7 @@
             avatar.appendChild(uploadBtn);
         }
 
-        // Add password change section
-        if (!document.getElementById('passwordChangeSection')) {
-            const profileCard = document.querySelector('.profile-card');
-            const passwordSection = document.createElement('div');
-            passwordSection.id = 'passwordChangeSection';
-            passwordSection.style.cssText = 'margin-top: 1.5rem; padding: 1rem; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;';
-            passwordSection.innerHTML = `
-                <div style="font-weight: 700; color: var(--ink); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-key"></i> Change Password
-                </div>
-                <div style="display: grid; gap: 1rem;">
-                    <div style="position: relative;">
-                        <label style="font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; display: block; font-size: 0.9rem;">New Password</label>
-                        <input type="password" id="patient-new-password" placeholder="Enter new password" style="width: 100%; padding: 0.75rem 2.5rem 0.75rem 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem;">
-                        <button type="button" onclick="togglePasswordVisibility('patient-new-password')" style="position: absolute; right: 10px; top: 38px; background: none; border: none; cursor: pointer; color: var(--gray); font-size: 1.1rem;"><i class="fas fa-eye"></i></button>
-                    </div>
-                    <div style="position: relative;">
-                        <label style="font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; display: block; font-size: 0.9rem;">Confirm Password</label>
-                        <input type="password" id="patient-confirm-password" placeholder="Confirm new password" style="width: 100%; padding: 0.75rem 2.5rem 0.75rem 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem;">
-                        <button type="button" onclick="togglePasswordVisibility('patient-confirm-password')" style="position: absolute; right: 10px; top: 38px; background: none; border: none; cursor: pointer; color: var(--gray); font-size: 1.1rem;"><i class="fas fa-eye"></i></button>
-                    </div>
-                    <button type="button" onclick="updatePatientPassword()" style="background: #ffc107; color: var(--ink); border: none; padding: 0.65rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">Update Password</button>
-                </div>
-            `;
-            profileCard.appendChild(passwordSection);
-        }
+
 
         // Add save button
         if (!document.getElementById('saveProfileBtn')) {
@@ -1402,6 +1412,14 @@
     }
 
     function convertToViewMode() {
+        // Hide confirm password row
+        const confirmPasswordRow = document.getElementById('confirm-password-row');
+        if (confirmPasswordRow) confirmPasswordRow.style.display = 'none';
+        
+        // Hide password error
+        const errorDiv = document.getElementById('patient-password-match-error');
+        if (errorDiv) errorDiv.style.display = 'none';
+        
         // Remove name container if it exists
         const nameContainer = document.querySelector('.info-row .edit-input[data-field="first_name"]')?.parentElement;
         if (nameContainer && nameContainer.style.display.includes('grid')) {
@@ -1426,10 +1444,6 @@
         const uploadBtn = document.querySelector('.photo-upload-btn');
         if (uploadBtn) uploadBtn.remove();
 
-        // Remove password change section
-        const passwordSection = document.getElementById('passwordChangeSection');
-        if (passwordSection) passwordSection.remove();
-
         // Remove save button
         const saveBtn = document.getElementById('saveProfileBtn');
         if (saveBtn) saveBtn.remove();
@@ -1446,7 +1460,9 @@
             'Phone Number': 'phone_number',
             'Phone Type': 'phone_type',
             'Emergency Contact Person': 'contact_person',
-            'Relationship to Patient': 'relationship_to_patient'
+            'Relationship to Patient': 'relationship_to_patient',
+            'Password': 'password',
+            'Confirm Password': 'confirm_password'
         };
         return mapping[label] || label.toLowerCase().replace(/\s+/g, '_');
     }
@@ -1456,6 +1472,38 @@
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-spinner fa-spin"></i> SAVING...</span>';
+        }
+
+        // Validate password if provided
+        const passwordInput = document.querySelector('.edit-input[data-field="password"]');
+        const confirmInput = document.querySelector('.edit-input[data-field="confirm_password"]');
+        const errorDiv = document.getElementById('patient-password-match-error');
+        
+        if (passwordInput && confirmInput) {
+            const password = passwordInput.value;
+            const confirm = confirmInput.value;
+            
+            if (password || confirm) {
+                if (password.length < 6) {
+                    alert('Password must be at least 6 characters long');
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-save"></i> SAVE CHANGES</span>';
+                    }
+                    passwordInput.focus();
+                    return;
+                }
+                if (password !== confirm) {
+                    if (errorDiv) errorDiv.style.display = 'block';
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-save"></i> SAVE CHANGES</span>';
+                    }
+                    confirmInput.focus();
+                    return;
+                }
+            }
+            if (errorDiv) errorDiv.style.display = 'none';
         }
 
         const formData = new FormData();
@@ -1596,73 +1644,6 @@
     }
     
     // Password Visibility Toggle
-    function togglePasswordVisibility(inputId) {
-        const input = document.getElementById(inputId);
-        const button = input.nextElementSibling;
-        const icon = button.querySelector('i');
-        
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-    }
-
-    // Update Patient Password
-    async function updatePatientPassword() {
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        
-        // Validation
-        if (!newPassword || !confirmPassword) {
-            alert('Please fill in both password fields');
-            return;
-        }
-        
-        if (newPassword.length < 8) {
-            alert('Password must be at least 8 characters long');
-            return;
-        }
-        
-        if (newPassword !== confirmPassword) {
-            alert('Passwords do not match');
-            return;
-        }
-        
-        try {
-            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            const response = await fetch('{% url "patient_change_password" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    new_password: newPassword,
-                    confirm_password: confirmPassword
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                alert('Password updated successfully!');
-                // Clear password fields
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-            } else {
-                alert(data.error || 'Failed to update password');
-            }
-        } catch (error) {
-            console.error('Error updating password:', error);
-            alert('Error updating password. Please try again.');
-        }
-    }
-
     // Settings Actions
     function changePassword() {
         alert('Change Password feature will be implemented soon. Please contact support for password changes.');
